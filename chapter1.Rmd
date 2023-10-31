@@ -14,7 +14,7 @@ output:
 
 # About the project
 
-Hello, this is my page for the course "Introduction to open data science". [Link](https://github.com/petrusk4/IODS-project) to my GitHub-repository. 
+Hello, this is my page for the course "Introduction to open data science, 5 ECTS". [Link](https://github.com/petrusk4/IODS-project) to my GitHub-repository. 
 
 Let's enjoy this interesting course!
 
