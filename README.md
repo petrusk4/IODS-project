@@ -1,2 +1,2 @@
 # IODS-project
-Template for the IODS course
+Course assignments for Introduction to open data science, 5 ECTS
