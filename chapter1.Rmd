@@ -1,13 +1,22 @@
+---
+title: "IODS"
+author: "Petrus Nuotio"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::robobook:
+    embed-resources: standalone
+    thumbnails: true
+    lightbox: true
+    gallery: true
+    code_folding: hide
+---
+
 
 # About the project
 
-*Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
+Hello, this is my page for the course "Introduction to open data science". [Link](https://github.com/petrusk4/IODS-project) to my GitHub-repository. 
 
-```{r}
-# This is a so-called "R chunk" where you can write R code.
+Let's enjoy this interesting course!
 
-date()
 
-```
-The text continues here.
-
+Best, Petrus
