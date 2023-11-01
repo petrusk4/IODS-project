@@ -1,13 +1,12 @@
 ---
 title: "IODS course project"
 output:
-  html_document:
-    theme: cosmo
-    toc: true
-    toc_depth: 2
-    fig_caption: true
-    fig_width: 6
-    fig_height: 4
+  rmdformats::robobook:
+    embed-resources: standalone
+    thumbnails: true
+    lightbox: true
+    gallery: true
+    code_folding: hide
 ---
 
 ***
