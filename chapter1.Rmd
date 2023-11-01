@@ -1,17 +1,3 @@
----
-title: "IODS"
-author: "Petrus Nuotio"
-date: "`r Sys.Date()`"
-output:
-  rmdformats::robobook:
-    embed-resources: standalone
-    thumbnails: true
-    lightbox: true
-    gallery: true
-    code_folding: hide
----
-
-
 # About the project
 
 Hello, this is my page for the course "Introduction to open data science, 5 ECTS". [Link](https://github.com/petrusk4/IODS-project) to my GitHub-repository. 
