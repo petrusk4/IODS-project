@@ -1,2 +1,2 @@
 # IODS-project
-Course assignments for Introduction to open data science, 5 ECTS. Click [here](https://petrusk4.github.io/IODS-project/) to see the what I have done: 
+Course assignments for Introduction to open data science, 5 ECTS. Here you can find the [course diary](https://petrusk4.github.io/IODS-project/). 
