@@ -1,5 +1,6 @@
 ---
 title: "IODS course project"
+author: "Petrus Nuotio"
 output:
   rmdformats::robobook:
     embed-resources: standalone
@@ -7,6 +8,14 @@ output:
     lightbox: true
     gallery: true
     code_folding: hide
+# output:
+#   rmdformats::downcute:
+#     downcute_theme: "chaos"
+#     self_contained: true
+#     thumbnails: true
+#     lightbox: true
+#     gallery: false
+#     highlight: tango
 ---
 
 ***
