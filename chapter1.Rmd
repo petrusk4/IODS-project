@@ -8,7 +8,7 @@ Lastly, check out my [GitHub-repository](https://github.com/petrusk4/IODS-projec
 Let's enjoy this interesting course!
 
 
-```{r fig.height=1.5, fig.width=3}
+```{r fig.height=1.5, fig.width=3, message=F}
 pacman::p_load(tidyverse)
 
 MyName <- "Petrus"

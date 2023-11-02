@@ -1,13 +1,77 @@
-# Insert chapter 2 title here
+# Regression and model validation
 
-*Describe the work you have done this week and summarize your learning.*
+> ### Instructions
+> Describe the work you have done this week and summarize your learning.
+>
+> - Describe your work and results clearly. 
+> - Assume the reader has an introductory course level understanding of > writing and reading R code as well as statistical methods.
+> - Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+## 2.0 Packages
+
+Let's first load the required packages.
 
 ```{r}
-date()
+pacman::p_load(tidyverse, GGally)
 ```
 
-Here we go again...
+## 2.1 Reading data from the web
+
+Let's begin by exploring our dataset. Click here for [metadata](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt).
+
+```{r}
+lrn14 <- read.table("http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-data.txt", sep = "\t", header = TRUE)
+dim(lrn14)
+# str(lrn14)
+```
+
+### Observations from the data:
+
+- Looks like the `lrn14` dataset has `r nrow(lrn14)` rows and `r ncol(lrn14)` columns.
+- Most columns appear to be intergers, whereas only `gender` is character.
+
+
+## 2.2 Scaling variables
+
+> ### Instructions
+> - Execute the example codes to see how vectorized division works
+> - Use vector division to create a new column `attitude` in the `lrn14` data frame, where each observation of `Attitude` is scaled back to the original scale of the questions, by dividing it with the number of questions.
+> 
+> Hint:
+> - Assign 'Attitude divided by 10' to the new column 'attitude.
+
+```{r}
+lrn14$Attitude
+
+
+```
+
+
+
+## 2.3 Combining variables
+## 2.4 Selecting columns
+
+> ### Instructions
+> - Access the **dplyr** library
+> - Create object `keep_columns`
+> - Use `select()` (possibly together with `one_of()`) to create a new data frame `learning2014` with the columns named in `keep_columns`.
+> - Look at the structure of the new dataset
+> 
+> Hint:
+> - See the previous exercise or the data wrangling cheatsheet for help on how to select columns
+
+## 2.5 Modifying column names
+
+## 2.6 Excluding observations
+
+## 2.7 Visualizations with ggplot2
+
+## 2.8 Exploring a data frame
+
+## 2.9 Simple regression
+
+## 2.10 Multiple regression
+
+## 2.11 Graphical model validation
+
+## 2.12 Making predictions
