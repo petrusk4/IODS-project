@@ -983,8 +983,11 @@ Look at Figure 4.9 on page <https://argoshare.is.ed.ac.uk/healthyr_book/line-plo
 
 ```{r}
 gapdata %>% 
-  ggplot(aes(x = year, y = lifeExp, group = country)) +
-  geom_line()
+  ggplot(aes(x = year, y = lifeExp, color = continent, group = country)) +
+  geom_line() + 
+  
+  facet_wrap(. ~continent) +
+  scale_colour_brewer(palette = "Paired")
 ```
 
 Try to transform the above graph following these instructions:
@@ -1035,7 +1038,11 @@ gapdata2007 %>%
 Look at Figure 4.13 on the page <https://argoshare.is.ed.ac.uk/healthyr_book/bar-plots.html> and try to recreate it!
 
 ```{r}
-
+gapdata2007 %>%
+  # filter(lifeExp > 70) %>%
+  filter(continent == "Europe") %>%
+  ggplot(aes(x = lifeExp, y = reorder(country, -desc(lifeExp)))) +
+  geom_col()
 ```
 
 ## 4.7 Histograms

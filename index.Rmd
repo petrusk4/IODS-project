@@ -1,21 +1,21 @@
 ---
 title: "IODS course project"
 author: "Petrus Nuotio"
-output:
-  rmdformats::robobook:
-    embed-resources: standalone
-    thumbnails: true
-    lightbox: true
-    gallery: true
-    code_folding: hide
 # output:
-#   rmdformats::downcute:
-#     downcute_theme: "chaos"
-#     self_contained: true
+#   rmdformats::robobook:
+#     embed-resources: standalone
 #     thumbnails: true
 #     lightbox: true
-#     gallery: false
-#     highlight: tango
+#     gallery: true
+#     code_folding: hide
+output:
+  rmdformats::downcute:
+    downcute_theme: "chaos"
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
 ---
 
 ***
@@ -29,10 +29,6 @@ output:
 ***
   
 ```{r child = "chapter2.Rmd"}
-# This will include Chapter 2 (that is updated in its own file) in the document.
 ```
 
 ***
-
-(more chapters to be added similarly as we proceed with the course!)
-
