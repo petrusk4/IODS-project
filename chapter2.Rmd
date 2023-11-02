@@ -41,8 +41,9 @@ dim(lrn14)
 > - Assign 'Attitude divided by 10' to the new column 'attitude.
 
 ```{r}
-lrn14$Attitude
-
+lrn14 <- lrn14 %>%
+  mutate(attitude = Attitude / 10)
+hist(lrn14$attitude)
 
 ```
 
@@ -59,6 +60,11 @@ lrn14$Attitude
 > 
 > Hint:
 > - See the previous exercise or the data wrangling cheatsheet for help on how to select columns
+
+```{r}
+
+```
+
 
 ## 2.5 Modifying column names
 
