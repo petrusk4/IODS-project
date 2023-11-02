@@ -1,7 +1,6 @@
 ## About the project
 
-Hello, this is my page for the course "Introduction to open data science, 5 ECTS". Three friends of mine recommended this course and told great stuff about it. I have 2 years of experience with R, but now I want to take it to the next level. That's why I'm thrilled to learn Git, which I expect from this course.
-
+**Hello**, this is my page for the course "Introduction to open data science, 5 ECTS". Three friends of mine recommended this course and told great stuff about it. I have 2 years of experience with `R`, but now I want to take it to the next level. That's why I'm thrilled to learn `Git`, which I expect from this course.
 
 
 Lastly, check out my [GitHub-repository](https://github.com/petrusk4/IODS-project). 
@@ -9,4 +8,36 @@ Lastly, check out my [GitHub-repository](https://github.com/petrusk4/IODS-projec
 Let's enjoy this interesting course!
 
 
-Best, Petrus
+```{r fig.height=1.5, fig.width=3}
+pacman::p_load(tidyverse)
+
+MyName <- "Petrus"
+MyLetters <- base::strsplit(MyName, "") %>% unlist()
+
+p <- data.frame(
+  height = jitter(rep(1, times = length(MyLetters)), amount = .3),
+  number = 1:length(MyLetters),
+  letter = MyLetters
+) %>% ggplot(aes(x = number, y = height, color = factor(number)))
+p <- p + geom_text(aes(label = letter), size = 10, fontface = "bold")
+p <- p + ggdark::dark_theme_gray()
+# p <- p + ggdark::dark_mode(ggthemes::theme_fivethirtyeight())
+p <- p + theme(legend.position = "none")
+p <- p + harrypotter::scale_color_hp_d("LunaLovegood")
+p <- p + xlab("") + ylab("") + coord_cartesian(ylim = c(0, 2))
+p <- p + labs(title = "Sincerely, ")
+p <- p + facet_wrap(. ~ "The aspiring R coder")
+p
+
+```
+
+
+## Reflections
+
+### `R` for Health Data Science book
+
+[This book](https://argoshare.is.ed.ac.uk/healthyr_book/) is a blast to read on the couch from iPad. 
+
+### The Exercise Set 1
+
+I completed the chapters 1--5 and was familiar with the substance, but there were some nifty functions that I'll probably try out soon.

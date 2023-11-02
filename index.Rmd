@@ -1,6 +1,7 @@
 ---
 title: "IODS course project"
 author: "Petrus Nuotio"
+date: "`r Sys.Date()`"
 # output:
 #   rmdformats::robobook:
 #     embed-resources: standalone
@@ -12,23 +13,20 @@ output:
   rmdformats::downcute:
     downcute_theme: "chaos"
     self_contained: true
-    thumbnails: true
+    thumbnails: false
     lightbox: true
     gallery: false
     highlight: tango
+    code_folding: hide
 ---
 
-***
+<!-- *** -->
 
 # Introduction to Open Data Science - Course Project
 
 ```{r child = "chapter1.Rmd"}
 # This will include Chapter 1 (that is updated in its own file) in the document.
 ```
-  
-***
-  
+
 ```{r child = "chapter2.Rmd"}
 ```
-
-***

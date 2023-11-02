@@ -7,6 +7,7 @@
 
         <meta name="author" content="Petrus Nuotio" />
     
+        <meta name="date" content="2023-11-02" />
     
     <title>IODS course project</title>
 
@@ -177,6 +178,79 @@ window.buildTabsets = function(tocID) {
   });
 };
 
+</script>
+        <script>
+window.initializeCodeFolding = function(show) {
+
+  // handlers for show-all and hide all
+  $("#rmd-show-all-code").click(function() {
+    $('div.r-code-collapse').each(function() {
+      $(this).collapse('show');
+    });
+  });
+  $("#rmd-hide-all-code").click(function() {
+    $('div.r-code-collapse').each(function() {
+      $(this).collapse('hide');
+    });
+  });
+
+  // index for unique code element ids
+  var currentIndex = 1;
+
+  // select all R code blocks
+  var rCodeBlocks = $('pre.r, pre.python, pre.bash, pre.sql, pre.cpp, pre.stan, pre.julia, pre.foldable');
+  rCodeBlocks.each(function() {
+
+    // create a collapsable div to wrap the code in
+    var div = $('<div class="collapse r-code-collapse"></div>');
+    var showThis = (show || $(this).hasClass('fold-show')) && !$(this).hasClass('fold-hide');
+    var id = 'rcode-643E0F36' + currentIndex++;
+    div.attr('id', id);
+    $(this).before(div);
+    $(this).detach().appendTo(div);
+
+    // add a show code button right above
+    var showCodeText = $('<span>' + (showThis ? 'Hide' : 'Code') + '</span>');
+    var showCodeButton = $('<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm code-folding-btn pull-right float-right"></button>');
+    showCodeButton.append(showCodeText);
+    showCodeButton
+        .attr('data-toggle', 'collapse')
+        .attr('data-target', '#' + id)
+        .attr('aria-expanded', showThis)
+        .attr('aria-controls', id);
+
+    var buttonRow = $('<div class="row"></div>');
+    var buttonCol = $('<div class="col-md-12"></div>');
+
+    buttonCol.append(showCodeButton);
+    buttonRow.append(buttonCol);
+
+    div.before(buttonRow);
+
+    // show the div if necessary
+    if (showThis) div.collapse('show');
+
+    // update state of button on show/hide
+    //   * Change text
+    //   * add a class for intermediate states styling
+    div.on('hide.bs.collapse', function () {
+      showCodeText.text('Code');
+      showCodeButton.addClass('btn-collapsing');
+    });
+    div.on('hidden.bs.collapse', function () {
+      showCodeButton.removeClass('btn-collapsing');
+    });
+    div.on('show.bs.collapse', function () {
+      showCodeText.text('Hide');
+      showCodeButton.addClass('btn-expanding');
+    });
+    div.on('shown.bs.collapse', function () {
+      showCodeButton.removeClass('btn-expanding');
+    });
+
+  });
+
+}
 </script>
         <style type="text/css">
 .mfp-bg {
@@ -1814,6 +1888,11 @@ Prism.languages.r={comment:/#.*/,string:{pattern:/(['"])(?:\\.|(?!\1)[^\\\r\n])*
     </script>
 
     <!-- code folding -->
+        <script>
+      $(document).ready(function () {
+	  	  	  window.initializeCodeFolding("hide" === "show");
+	        });
+    </script>
     
     <!-- code download -->
     
@@ -1887,6 +1966,7 @@ margin-left: 0 !important;
             to Open Data Science - Course Project</a>
             <ul>
             <li><a href="#about-the-project" id="toc-about-the-project">About the project</a></li>
+            <li><a href="#reflections" id="toc-reflections">Reflections</a></li>
             </ul></li>
             <li><a href="#insert-chapter-2-title-here" id="toc-insert-chapter-2-title-here">Insert chapter 2 title
             here</a></li>
@@ -1897,6 +1977,13 @@ margin-left: 0 !important;
         <div class="Main">
           <div class="Content" id="content"> 
    
+      <div class="btn-group pull-right">
+     <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+     <ul class="dropdown-menu" style="min-width: 50px;">
+	    	    <li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+	    <li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+	    	    	         </ul>
+   </div>
    
         
       <h1 class="title">IODS course project</h1>
@@ -1904,27 +1991,62 @@ margin-left: 0 !important;
       <p class="authors">
            <span class="glyphicon glyphicon-user"></span> Petrus Nuotio
       </p>
-              
+         <p class="date"><span class="glyphicon glyphicon-calendar"></span> 2023-11-02</p>
+           
 
    
       
    
 <!-- Don't indent these lines or it will mess pre blocks indentation --> 
 <div class="page-content has-page-title">
-<hr />
+<!-- *** -->
 <div id="introduction-to-open-data-science---course-project" class="section level1">
 <h1>Introduction to Open Data Science - Course Project</h1>
 <div id="about-the-project" class="section level2">
 <h2>About the project</h2>
-<p>Hello, this is my page for the course “Introduction to open data
-science, 5 ECTS”. Three friends of mine recommended this course and told
-great stuff about it. I have 2 years of experience with R, but now I
-want to take it to the next level. That’s why I’m thrilled to learn Git,
-which I expect from this course.</p>
+<p><strong>Hello</strong>, this is my page for the course “Introduction
+to open data science, 5 ECTS”. Three friends of mine recommended this
+course and told great stuff about it. I have 2 years of experience with
+<code>R</code>, but now I want to take it to the next level. That’s why
+I’m thrilled to learn <code>Git</code>, which I expect from this
+course.</p>
 <p>Lastly, check out my <a href="https://github.com/petrusk4/IODS-project">GitHub-repository</a>.</p>
 <p>Let’s enjoy this interesting course!</p>
-<p>Best, Petrus</p>
-<hr />
+<pre class="r"><code>pacman::p_load(tidyverse)
+
+MyName &lt;- &quot;Petrus&quot;
+MyLetters &lt;- base::strsplit(MyName, &quot;&quot;) %&gt;% unlist()
+
+p &lt;- data.frame(
+  height = jitter(rep(1, times = length(MyLetters)), amount = .3),
+  number = 1:length(MyLetters),
+  letter = MyLetters
+) %&gt;% ggplot(aes(x = number, y = height, color = factor(number)))
+p &lt;- p + geom_text(aes(label = letter), size = 10, fontface = &quot;bold&quot;)
+p &lt;- p + ggdark::dark_theme_gray()</code></pre>
+<pre><code>## Inverted geom defaults of fill and color/colour.
+## To change them back, use invert_geom_defaults().</code></pre>
+<pre class="r"><code># p &lt;- p + ggdark::dark_mode(ggthemes::theme_fivethirtyeight())
+p &lt;- p + theme(legend.position = &quot;none&quot;)
+p &lt;- p + harrypotter::scale_color_hp_d(&quot;LunaLovegood&quot;)
+p &lt;- p + xlab(&quot;&quot;) + ylab(&quot;&quot;) + coord_cartesian(ylim = c(0, 2))
+p &lt;- p + labs(title = &quot;Sincerely, &quot;)
+p &lt;- p + facet_wrap(. ~ &quot;The aspiring R coder&quot;)
+p</code></pre>
+<p><img src="data:image/png;base64,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" width="288" /></p>
+</div>
+<div id="reflections" class="section level2">
+<h2>Reflections</h2>
+<div id="r-for-health-data-science-book" class="section level3">
+<h3><code>R</code> for Health Data Science book</h3>
+<p><a href="https://argoshare.is.ed.ac.uk/healthyr_book/">This book</a>
+is a blast to read on the couch from iPad.</p>
+</div>
+<div id="the-exercise-set-1" class="section level3">
+<h3>The Exercise Set 1</h3>
+<p>I completed the chapters 1–5 and was familiar with the substance, but
+there were some nifty functions that I’ll probably try out soon.</p>
+</div>
 </div>
 </div>
 <div id="insert-chapter-2-title-here" class="section level1">
@@ -1939,11 +2061,8 @@ writing and reading R code as well as statistical methods.</li>
 advanced methods you are using.</li>
 </ul>
 <pre class="r"><code>date()</code></pre>
-<pre><code>## [1] &quot;Thu Nov  2 14:18:10 2023&quot;</code></pre>
+<pre><code>## [1] &quot;Thu Nov  2 15:19:04 2023&quot;</code></pre>
 <p>Here we go again…</p>
-<hr />
-<p>(more chapters to be added similarly as we proceed with the
-course!)</p>
 </div>
 </div>
 
@@ -1962,8 +2081,7 @@ course!)</p>
 		// add bootstrap table styles to pandoc tables
 	$('tr.header').parent('thead').parent('table').addClass('table table-condensed');
 		
- 	 	$('#content img').addClass("image-thumb");
-		
+ 		
 		$('#content img:not(.no-lightbox)').addClass("image-lb");
 	$('#content').magnificPopup({
 	    type:'image',
