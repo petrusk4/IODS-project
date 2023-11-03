@@ -20,13 +20,12 @@ p <- data.frame(
   letter = MyLetters
 ) %>% ggplot(aes(x = number, y = height, color = factor(number)))
 p <- p + geom_text(aes(label = letter), size = 10, fontface = "bold")
-p <- p + ggdark::dark_theme_gray()
 # p <- p + ggdark::dark_mode(ggthemes::theme_fivethirtyeight())
 p <- p + theme(legend.position = "none")
 p <- p + harrypotter::scale_color_hp_d("LunaLovegood")
 p <- p + xlab("") + ylab("") + coord_cartesian(ylim = c(0, 2))
-p <- p + labs(title = "Sincerely, ")
-p <- p + facet_wrap(. ~ "The aspiring R coder")
+# p <- p + labs(title = "")
+p <- p + facet_wrap(. ~ "Sincerely, ")
 p
 
 ```

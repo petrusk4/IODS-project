@@ -24,8 +24,14 @@ output:
 
 # Introduction to Open Data Science - Course Project
 
+```{r}
+pacman::p_load(tidyverse)
+ggdark::dark_theme_gray() %+replace% 
+  ggplot2::theme(plot.background = element_rect(color = "#141415", fill = "#141415")) %>%
+  ggplot2::theme_set()
+```
+
 ```{r child = "chapter1.Rmd"}
-# This will include Chapter 1 (that is updated in its own file) in the document.
 ```
 
 ```{r child = "chapter2.Rmd"}
