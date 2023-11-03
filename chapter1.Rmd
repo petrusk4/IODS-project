@@ -1,6 +1,7 @@
+# 1: Start me up!
 ## About the project
 
-**Hello**, this is my page for the course "Introduction to open data science, 5 ECTS". Three friends of mine recommended this course and told great stuff about it. I have 2 years of experience with `R`, but now I want to take it to the next level. That's why I'm thrilled to learn `Git`, which I expect from this course.
+**Hello**, this is my page for the course "*Introduction to open data science, 5 ECTS*". Three friends of mine recommended this course and told great stuff about it. I have 2 years of experience with `R`, but now want to take it to the next level. That's why I'm thrilled to learn `Git`, which I expect from this course.
 
 
 Lastly, check out my [GitHub-repository](https://github.com/petrusk4/IODS-project). 

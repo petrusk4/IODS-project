@@ -1,4 +1,4 @@
-# Regression and model validation
+# 2: Regression and model validation
 
 > ### Instructions
 > Describe the work you have done this week and summarize your learning.
@@ -7,18 +7,21 @@
 > - Assume the reader has an introductory course level understanding of > writing and reading R code as well as statistical methods.
 > - Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
 
-## 2.0 -- 2.5 Data wrangling
+## ***Data wrangling***
 
-### 2.0 Packages
+Sections 2.0 -- 2.6 produce a dataset named `data/learning2014.csv`. For statistical analysis, skip to **section 2.7**.
+
+
+## 2.0 Packages
 
 Let's first load the required packages.
 
 ```{r}
-pacman::p_load(tidyverse, GGally)
+pacman::p_load(tidyverse, GGally, patchwork)
 ```
 
 
-### 2.1 Reading data from the web
+## 2.1 Reading data from the web
 
 Let's begin by exploring our dataset. Click here for [metadata](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt).
 
@@ -32,13 +35,13 @@ dim(lrn14)
 ```
 
 
-#### Observations from the data:
+### Observations from the data:
 
 - Looks like the `lrn14` dataset has `r nrow(lrn14)` rows and `r ncol(lrn14)` columns.
 - Most columns appear to be intergers, whereas only `gender` is character.
 
 
-### 2.2 Scaling variables
+## 2.2 Scaling variables
 
 > ### Instructions
 > - Execute the example codes to see how vectorized division works
@@ -57,7 +60,7 @@ lrn14 %>% ggplot(aes(x = attitude)) + geom_density()
 ```
 
 
-### 2.3 Combining variables
+## 2.3 Combining variables
 
 > ### Instructions
 > - Access the **dplyr** library
@@ -106,7 +109,7 @@ for (Qclass in c("deep", "surf", "stra")) {
 ```
 
 
-### 2.4 Selecting columns
+## 2.4 Selecting columns
 
 > ### Instructions
 > - Access the **dplyr** library
@@ -148,19 +151,102 @@ learning2014 <- learning2014 %>%
 colnames(learning2014)
 ```
 
-### Write to file
-
-```{r}
-write_csv(learning2014, "data/learning2014.csv")
-
-```
-
 
 ## 2.6 Excluding observations
 
+```{r}
+learning2014 <- learning2014 %>%
+  filter(points > 0)
+```
+
+
+### Write to file
+
+```{r}
+# Write
+readr::write_csv(learning2014, "data/learning2014.csv")
+```
+
+
+## ***Analysis***
+
+```{r}
+# Get data
+data <- readr::read_csv("data/learning2014.csv")
+head(data); str(data)
+
+# Check numeric variables
+data.frame(do.call(cbind, lapply(data, summary))) %>%
+  select(-gender) %>%
+  DT::datatable()
+
+# Table gender
+table(data$gender, useNA = "always")
+```
+
+```{r}
+p <- data %>% pivot_longer(
+  cols = colnames(data)[-1],
+  values_to = "value",
+  names_to = "var"
+) %>% ggplot(aes(x = value, color = var))#, linetype = gender
+p <- p + geom_density()
+p <- p + scale_x_sqrt(limits = c(0, NA))
+p
+```
+
+
+This dataset has also a variable called `gender`
+
+```{r}
+p <- data %>% ggplot(aes(x = gender, fill = gender))
+p <- p + geom_bar(width = .5)
+p <- p + scale_fill_manual(values = rev(c("dodgerblue", "orangered")))
+p1 <- p
+
+p <- data %>% pivot_longer(
+  cols = colnames(data)[-1],
+  values_to = "value",
+  names_to = "var"
+) %>% ggplot(aes(x = value, color = gender))#, linetype = gender
+p <- p + geom_density()
+# p <- p + scale_x_sqrt()
+p <- p + facet_wrap(. ~ var, scales = "free")
+p <- p + scale_color_manual(values = rev(c("dodgerblue", "orangered")))
+p2 <- p
+
+
+library(patchwork)
+p1 + p2 + plot_layout(widths = c(.3, 1), guides = 'collect')
+
+```
+
+There is plausibilitiy that the attitude of the students or different learning strategies influence exam points. Therefore, let's glance over the potential relationships within the data:
+
+```{r}
+p <- data %>% pivot_longer(
+  cols = c(attitude, deep, stra, surf),
+  values_to = "answer",
+  names_to = "var"
+) %>% ggplot(aes(x = answer, y = points, color = var))
+p <- p + geom_point(alpha = .5, size = 1)
+p <- p + geom_smooth(method = "lm", se = F)
+p <- p + coord_cartesian(xlim = c(0, 5))
+p
+```
 
 
 ## 2.7 Visualizations with ggplot2
+
+```{r}
+p <- data %>%
+  ggplot(aes(x = attitude, y = points, col = gender))
+p <- p + geom_point()
+p <- p + geom_smooth(method = "lm")
+p <- p + ggtitle("Student's attitude versus exam points")
+p
+```
+
 
 ## 2.8 Exploring a data frame
 
