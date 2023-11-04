@@ -18,6 +18,11 @@ Let's first load the required packages.
 
 ```{r}
 pacman::p_load(tidyverse, GGally, patchwork)
+
+# Defining some functions
+color_gender <- function () {scale_color_manual(values = rev(c("dodgerblue", "orangered")))}
+fill_gender <- function () {scale_fill_manual(values = rev(c("dodgerblue", "orangered")))}
+
 ```
 
 
@@ -55,12 +60,29 @@ dim(lrn14)
 lrn14 <- lrn14 %>%
   mutate(attitude = Attitude / 10)
 
-# Check the distribution
-lrn14 %>% ggplot(aes(x = attitude)) + geom_density()
+# Check the distributions
+ggpubr::ggarrange(
+  # Density
+  lrn14 %>% ggplot(aes(x = attitude)) + geom_density() +
+    coord_cartesian(xlim = c(0, 6)),
+  # Sina
+  lrn14 %>%
+    pivot_longer(
+      cols = c(Attitude, attitude),
+      names_to = "var",
+      values_to = "value"
+    ) %>% ggplot(aes(y = value, x = var)) +
+    ggforce::geom_sina(size = .1, alpha = .5) +
+    scale_y_sqrt() +
+    geom_boxplot(width = .2, fill = NA, notch = T)
+)
+  
 ```
 
 
 ## 2.3 Combining variables
+
+Computing row means for each class of questions in a for-loop.
 
 > ### Instructions
 > - Access the **dplyr** library
@@ -111,6 +133,8 @@ for (Qclass in c("deep", "surf", "stra")) {
 
 ## 2.4 Selecting columns
 
+Dropping individual question data and only keeping variables relevant for the analysis.
+
 > ### Instructions
 > - Access the **dplyr** library
 > - Create object `keep_columns`
@@ -144,6 +168,8 @@ str(learning2014)
 
 ## 2.5 Modifying column names
 
+Changing all column names to include only lowercase letters.
+
 ```{r}
 colnames(learning2014)
 learning2014 <- learning2014 %>%
@@ -154,6 +180,8 @@ colnames(learning2014)
 
 ## 2.6 Excluding observations
 
+Excluding students that did not attend the exam.
+
 ```{r}
 learning2014 <- learning2014 %>%
   filter(points > 0)
@@ -161,6 +189,8 @@ learning2014 <- learning2014 %>%
 
 
 ### Write to file
+
+Saving the processed minimal dataframe as a `.csv` file.
 
 ```{r}
 # Write
@@ -176,9 +206,12 @@ data <- readr::read_csv("data/learning2014.csv")
 head(data); str(data)
 
 # Check numeric variables
-data.frame(do.call(cbind, lapply(data, summary))) %>%
+do.call(cbind, lapply(data, summary)) %>%
+  data.frame() %>%
   select(-gender) %>%
-  DT::datatable()
+  mutate(across(1:6, \(x) as.numeric(x))) %>%
+  mutate(across(1:6, \(x) round(x, 1))) %>%
+  knitr::kable() # DT::datatable()
 
 # Table gender
 table(data$gender, useNA = "always")
@@ -196,12 +229,12 @@ p
 ```
 
 
-This dataset has also a variable called `gender`
+This dataset also contains a variable called `gender`. It could be hypothesized that attitude, learning strategies and/or exam points differ between the genders. Perhaps `gender` modifies the relationship between learning strategies and exam points. 
 
-```{r}
+```{r fig.height=3, fig.width=6, message=FALSE, warning=FALSE}
 p <- data %>% ggplot(aes(x = gender, fill = gender))
 p <- p + geom_bar(width = .5)
-p <- p + scale_fill_manual(values = rev(c("dodgerblue", "orangered")))
+p <- p + fill_gender()
 p1 <- p
 
 p <- data %>% pivot_longer(
@@ -212,9 +245,21 @@ p <- data %>% pivot_longer(
 p <- p + geom_density()
 # p <- p + scale_x_sqrt()
 p <- p + facet_wrap(. ~ var, scales = "free")
-p <- p + scale_color_manual(values = rev(c("dodgerblue", "orangered")))
+p <- p + fill_gender()
 p2 <- p
 
+p <- data %>% pivot_longer(
+  cols = colnames(data)[-1],
+  values_to = "value",
+  names_to = "var"
+) %>% ggplot(aes(y = value, x = gender, color = gender))#, linetype = gender
+p <- p + ggforce::geom_sina(size = 1)
+p <- p + geom_boxplot(width = .2, color = "white", outlier.color = NA, alpha = .5)
+p <- p + stat_summary(fun = mean, shape = 4, color = "white")
+# p <- p + scale_x_sqrt()
+p <- p + facet_wrap(. ~ var, scales = "free")
+p <- p + color_gender()
+p2 <- p
 
 library(patchwork)
 p1 + p2 + plot_layout(widths = c(.3, 1), guides = 'collect')
@@ -223,7 +268,7 @@ p1 + p2 + plot_layout(widths = c(.3, 1), guides = 'collect')
 
 There is plausibilitiy that the attitude of the students or different learning strategies influence exam points. Therefore, let's glance over the potential relationships within the data:
 
-```{r}
+```{r fig.width=5, fig.height=4}
 p <- data %>% pivot_longer(
   cols = c(attitude, deep, stra, surf),
   values_to = "answer",
@@ -231,7 +276,7 @@ p <- data %>% pivot_longer(
 ) %>% ggplot(aes(x = answer, y = points, color = var))
 p <- p + geom_point(alpha = .5, size = 1)
 p <- p + geom_smooth(method = "lm", se = F)
-p <- p + coord_cartesian(xlim = c(0, 5))
+p <- p + coord_cartesian(xlim = c(1, 5))
 p
 ```
 
@@ -244,6 +289,8 @@ p <- data %>%
 p <- p + geom_point()
 p <- p + geom_smooth(method = "lm")
 p <- p + ggtitle("Student's attitude versus exam points")
+p <- p + coord_cartesian(xlim = c(1, 5))
+p <- p + color_gender()
 p
 ```
 
