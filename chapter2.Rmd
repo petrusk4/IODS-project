@@ -29,6 +29,33 @@ pacman::p_load(tidyverse, GGally, patchwork)
 color_gender <- function () {scale_color_manual(values = rev(c("dodgerblue", "orangered")))}
 fill_gender <- function () {scale_fill_manual(values = rev(c("dodgerblue", "orangered")))}
 
+# Dark mode theme
+backg <- "#141415"
+theme_darkmode <- function(){
+  ggdark::dark_theme_gray() %+replace% 
+    ggplot2::theme(
+      plot.background = element_rect(color = backg, fill = backg),
+      legend.box.background = element_rect(fill = backg, color = backg),
+      legend.background = element_rect(fill = backg, color = backg),
+      panel.grid = element_line(color = "gray20")
+    )
+}
+
+# Beautiful labels
+make_labs <- function (data, var) {
+  data %>%
+    mutate(
+      lab = case_when(
+        .data[[var]] == "age" ~ "Age",
+        .data[[var]] == "attitude" ~ "Attitude",
+        .data[[var]] == "points" ~ "Exam points",
+        .data[[var]] == "deep" ~ "Deep learning",
+        .data[[var]] == "stra" ~ "Strategic learning",
+        .data[[var]] == "surf" ~ "Surface learning",
+      )
+    ) %>%
+    return()
+}
 ```
 
 
@@ -59,7 +86,7 @@ dim(lrn14)
 > Hint:
 > - Assign 'Attitude divided by 10' to the new column 'attitude.
 
-```{r fig.width=4, fig.height=2}
+```{r fig.width=7, fig.height=2}
 # Scale the attitude variable to match other variables
 lrn14 <- lrn14 %>%
   mutate(attitude = Attitude / 10)
@@ -213,141 +240,189 @@ readr::write_csv(learning2014, "data/learning2014.csv")
 > ### Instructions
 > Read the students2014 data into R either from your local folder (if you completed the Data wrangling part) or from this url: https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/learning2014.txt . (The separator is a comma "," and the file includes a header). Explore the structure and the dimensions of the data and describe the dataset briefly, assuming the reader has no previous knowledge of it. There is information related to the data here. (0-2 points)
 
-Let's read in the `students2014.csv` dataset that was produced in the data wrangling part of the *Assignment 2*.
+Let's read in the `students2014.csv` dataset and check that it is read correctly.
 
-```{r fig.width=7, fig.height=4}
+```{r fig.width=7, fig.height=2}
 # Get data
-data <- readr::read_csv("data/learning2014.csv")
-head(data); str(data)
+data <- readr::read_csv("data/learning2014.csv", show_col_types = F)
 
-# Plot data "missingness"
-# Amelia::missmap(data)
-# naniar::vis_miss(data)
+# Glance at the data
+# data %>% head() %>% knitr::kable()
+str(data)
 
+# Plot data missingness
+naniar::vis_miss(data) + theme_darkmode() + ggtitle("Missingness map")
+```
+
+There are a total of **166 observations** and **7 variables**. We are dealing with **complete data** with no missing values. To note, there is no subject identifier. These may not be needed as we do not have repeated measures. The variables can be divided to the types below. Click here for more comprehensive [metadata](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt).
+
+#### Population characteristics
+
+- `age`: Age of the participant (in years) derived from the date of birth.
+- `gender`: Here gender is coded as a nominal variable with two defined/prevalent values (F = Female, M = Male).
+
+
+#### Survey answers
+
+Clearly, the four variables `attitude`, `deep`, `stra`, and `surf` represent survey answers on a likert scale (1--5). `attitude` captures student's global attitude towards statistics. The rest of the variables were computed as averages of various interrelated questions and describe the traits below and also described in detail e.g., [here](https://spark.scu.edu.au/kb/tl/teach/focus-on-learning/deep-surface-and-strategic-learning). These traits are important as they may influence success in students' work, reflected by exam `points`.
+
+- `surf`: *Surface learning*; emphasis upon memorising details to complete the assignment. Learning may be more superficial.
+- `deep`: *Deep learning*; looking for the overall meaning and attempting to process information in a holistic way.
+- `stra`: *Strategic learning*; organizing one's learning with the objective of achieving a positive outcome. Can involve a combination of both deep and surface learning strategies.
+
+
+#### Exam results
+
+- `points`: Results of the statistics exam. I did not find the maximum possible value from the metadata. Before the analysis, students that did not attend the exam (points == 0) were excluded from the dataset.
+
+
+### Summaries
+
+Let's summarize the numerical variables. 
+
+```{r}
 # Summaries for numeric variables
 do.call(cbind, lapply(data, summary)) %>%
   data.frame() %>% select(-gender) %>%
   mutate(across(1:6, \(x) as.numeric(x))) %>%
   mutate(across(1:6, \(x) round(x, 1))) %>%
   t() %>% knitr::kable() # DT::datatable()
-
-# Table gender
-# table(data$gender, useNA = "always")
 ```
 
-We are dealing with **complete data** with no missing values. Clearly, the four variables `attitude`, `deep`, `stra`, and `surf` represent averaged survey answers on a likert scale. Click here for more comprehensive [metadata](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt). 
-
-
-## 2.7 Visualizations with ggplot2
-
-### Population characteristics
-
-`Age` and `gender`
+Let's also see the distribution of `gender`. Later we'll probably also see whether `gender` modifies the relationship between `attitude`/learning and exam `points`.
 
 ```{r}
-p <- data %>% ggplot(aes(x = age, y = gender, color = gender))
-p <- p + ggridges::geom_density_ridges(
-  rel_min_height = .001, quantile_lines = T, quantiles = .5, jittered_points = TRUE,
-  position = "raincloud", point_alpha = .5, point_size = 1, alpha = .3
-)
-# p <- p + theme(legend.position = "none")
-p <- p + scale_x_sqrt(limits = c(0, NA))
-p <- p + labs(title = "Population characteristics")
-p <- p + color_gender()
-p
-
-
-# p <- data %>% ggplot(aes(x = gender, y = age))
-# p <- p + geom_jitter()
-# p
-
-
+data %>% count(gender) %>%
+  mutate(pct = scales::percent(n / sum(n))) %>%
+  knitr::kable()
 ```
 
+
+
+
+
+## 2.7 Visualizations with `ggplot2`
 
 > ### Instructions
 > Show a graphical overview of the data and show summaries of the variables in the data. Describe and interpret the outputs, commenting on the distributions of the variables and the relationships between them. (0-3 points)
 
 
-Let's begin by checking the distributions of our dataset. 
+### Distributions
 
-```{r fig.width=7, fig.height=4}
+Let's begin by visually inspecting the distributions of our dataset.
+
+```{r fig.height=4, fig.width=7, message=FALSE, warning=FALSE}
 p <- data %>% pivot_longer(
   cols = colnames(data)[-1],
   values_to = "value",
   names_to = "var"
-) %>% ggplot(aes(x = value, color = var, fill = var, y = var, linetype = gender))#
+) %>%
+  make_labs(data = ., var = "var") %>%
+  ggplot(aes(x = value, color = lab, fill = lab, y = lab, linetype = gender))
 p <- p + ggridges::geom_density_ridges(
-  rel_min_height = .001, quantile_lines = T, quantiles = .5, jittered_points = TRUE,
-  position = "raincloud", point_alpha = .5, point_size = 1, alpha = .3
+  rel_min_height = .001, quantile_lines = T, quantiles = .5,
+  jittered_points = TRUE, position = "raincloud",
+  point_alpha = .5, point_size = 1, alpha = .3
 )
-# p <- p + theme(legend.position = "none")
-p <- p + scale_x_sqrt(limits = c(0, NA))
-p <- p + labs(title = "Distributions")
+
+breakx <- c(1, 5, seq(10, 60, by = 10))
+p <- p + scale_x_sqrt(breaks = breakx, labels = breakx)
+p <- p + labs(
+  title = "Distributions by gender",
+  subtitle = "(On a square root x-axis)"
+) + xlab("Value") + ylab("")
 p
 ```
 
-
-
-
+**Likert-scale variables** are quite evenly spread on the range of 1--5. It appears that these students are `deep` learners more so than surface learners (`surf`). By visual inspection, men have more positive `attitude` towards statistics than women. Students tend to be of quite **young** `age` although a few older students skew the distribution heavily to the right. It also seems like men may be slightly older than female students. Whether these differences are statistically significant would require further testing...
 
 
 ### Predictors of exam `points`
 
-There is plausibility that the `attitude` of the students or different learning strategies influence exam `points`. Therefore, let's glance over these potential relationships:
+It is plausibile that students' `attitude` or learning strategies influence exam `points`. Therefore, let's glance over these potential relationships:
 
-```{r fig.width=5, fig.height=3}
+```{r fig.width=7, fig.height=4}
 p <- data %>% pivot_longer(
   cols = c(attitude, deep, stra, surf),
   values_to = "answer",
   names_to = "var"
-) %>% ggplot(aes(x = answer, y = points, color = var))
-p <- p + geom_point(alpha = .5, size = 1)
+) %>%
+  make_labs(var = "var") %>%
+  ggplot(aes(x = answer, y = points, color = lab))
+p <- p + geom_point(alpha = .5, size = .5)
 p <- p + geom_smooth(method = "lm", se = F)
 p <- p + coord_cartesian(xlim = c(1, 5))
+p <- p + labs(title = "Potential predictors for good or bad exam success") +
+  xlab("Average answer for the set of questions") + ylab("Exam points")
 p
 ```
 
+Interestingly, `attitude` shows positive relationship with exam `points`, whereas `surf`ace learning may be negatively associated with `points`. 
 
-### Gender
 
-This dataset also contains a variable called `gender`. It could be hypothesized that attitude, learning strategies and/or exam points differ between the genders.
+### Gender differences
 
-```{r fig.height=3, fig.width=6, message=FALSE, warning=FALSE}
-p <- data %>% ggplot(aes(x = gender, fill = gender))
-p <- p + geom_bar(width = .5)
+It could be hypothesized that attitude, learning strategies and/or exam points differ between the `gender`s. Let's also do some preliminary hypothesis testing using Wilcoxon signed-ranks test that requires minimal assumptions.
+
+```{r fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
+# Gender bar plot
+plotdata <- data %>%
+  group_by(gender) %>%
+  reframe(n = n()) %>%
+  mutate(
+    pct = scales::percent(n / sum(n))
+  )
+# Calculate 95% CIs
+for (i in 1:nrow(plotdata)) {
+  plotdata$Lower[i] <-
+    Hmisc::binconf(x = plotdata$n[i], n = sum(plotdata$n))[[2]] *
+    sum(plotdata$n)
+  plotdata$Upper[i] <-
+    Hmisc::binconf(x = plotdata$n[i], n = sum(plotdata$n))[[3]] *
+    sum(plotdata$n)
+}
+# Plot
+p <- plotdata %>%
+  ggplot(aes(x = gender, y = n, fill = gender))
+p <- p + geom_col(width = .5)
+p <- p + geom_errorbar(width = .1, aes(ymin = Lower, ymax = Upper))
+p <- p + geom_text(aes(y = Upper, label = paste0(pct, "\n")))
 p <- p + fill_gender()
+p <- p + scale_y_continuous(expand = expansion(mult = c(0, .1)))
+p <- p + labs(title = "Gender", subtitle = "95% CI")
 p1 <- p
 
+# Facetted sina plots
 p <- data %>% pivot_longer(
   cols = colnames(data)[-1],
   values_to = "value",
   names_to = "var"
-) %>% ggplot(aes(x = value, color = gender))#, linetype = gender
-p <- p + geom_density()
-# p <- p + scale_x_sqrt()
-p <- p + facet_wrap(. ~ var, scales = "free")
-p <- p + fill_gender()
-p2 <- p
-
-p <- data %>% pivot_longer(
-  cols = colnames(data)[-1],
-  values_to = "value",
-  names_to = "var"
-) %>% ggplot(aes(y = value, x = gender, color = gender))#, linetype = gender
-p <- p + ggforce::geom_sina(size = 1)
+) %>%
+  make_labs(var = "var") %>%
+  ggplot(aes(y = value, x = gender, color = gender))
+p <- p + geom_violin(fill = "white", color = NA, alpha = .1)
+p <- p + ggforce::geom_sina(size = .5)
 p <- p + geom_boxplot(width = .2, color = "white", outlier.color = NA, alpha = .5)
 p <- p + stat_summary(fun = mean, shape = 4, color = "white")
-# p <- p + scale_x_sqrt()
-p <- p + facet_wrap(. ~ var, scales = "free")
+p <- p + facet_wrap(. ~ lab, scales = "free")
 p <- p + color_gender()
+p <- p + labs(
+  title = "Potential gender differences",
+  subtitle = "Wilcoxon signed-ranks test"
+)
+p <- p + ggpubr::stat_compare_means(
+  method = "wilcox.test", size = 3,
+  label = "p.format", hjust = .5, aes(x = 1.5)
+)
+p <- p + scale_y_continuous(expand = expansion(mult = c(0, .15)))
 p2 <- p
 
-library(patchwork)
-p1 + p2 + plot_layout(widths = c(.3, 1), guides = 'collect')
-
+ggpubr::ggarrange(p1, p2, legend = "none", widths = c(.3, 1), labels = "AUTO")
 ```
 
+As observed from the plots, 
+
+### Influence of gender (learning × gender interactions)
 
 Perhaps `gender` modifies the relationship between learning strategies and exam points. 
 
