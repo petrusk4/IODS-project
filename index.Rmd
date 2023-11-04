@@ -17,7 +17,7 @@ output:
     lightbox: true
     gallery: false
     highlight: tango
-    code_folding: hide
+    code_folding: show #hide
 ---
 
 <!-- *** -->

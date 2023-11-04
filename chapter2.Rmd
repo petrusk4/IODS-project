@@ -7,28 +7,32 @@
 > - Assume the reader has an introductory course level understanding of > writing and reading R code as well as statistical methods.
 > - Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
 
-## ***Data wrangling***
+## **DATA WRANGLING**
 
-Sections 2.0 -- 2.6 produce a dataset named `data/learning2014.csv`. For statistical analysis, skip to **section 2.7**.
+Sections 2.0--2.6 produce a dataset named `data/learning2014.csv`. For statistical analysis, skip to **section 2.7**.
 
+**List of sections**
 
-## 2.0 Packages
+- 2.0 Packages
+- 2.1 Reading data from the web
+- 
+
+### 2.0-- 2.6 Packages
 
 Let's first load the required packages.
 
 ```{r}
+# Packages
 pacman::p_load(tidyverse, GGally, patchwork)
 
-# Defining some functions
+# Defining some custom functions
 color_gender <- function () {scale_color_manual(values = rev(c("dodgerblue", "orangered")))}
 fill_gender <- function () {scale_fill_manual(values = rev(c("dodgerblue", "orangered")))}
 
 ```
 
 
-## 2.1 Reading data from the web
-
-Let's begin by exploring our dataset. Click here for [metadata](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt).
+Reading data from:
 
 ```{r}
 # Get data
@@ -46,7 +50,7 @@ dim(lrn14)
 - Most columns appear to be intergers, whereas only `gender` is character.
 
 
-## 2.2 Scaling variables
+### 2.2 Scaling variables
 
 > ### Instructions
 > - Execute the example codes to see how vectorized division works
@@ -80,7 +84,7 @@ ggpubr::ggarrange(
 ```
 
 
-## 2.3 Combining variables
+### 2.3 Combining variables
 
 Computing row means for each class of questions in a for-loop.
 
@@ -109,7 +113,7 @@ stra <- c(
   "ST04", "ST12", "ST20", "ST28"
 )
 
-# Create averages in a loop
+# Compute averages in a loop
 for (Qclass in c("deep", "surf", "stra")) {
   lrn14[[Qclass]] <- rowMeans(lrn14[, get(Qclass)])
 }
@@ -131,7 +135,7 @@ for (Qclass in c("deep", "surf", "stra")) {
 ```
 
 
-## 2.4 Selecting columns
+### 2.4 Selecting columns
 
 Dropping individual question data and only keeping variables relevant for the analysis.
 
@@ -166,23 +170,26 @@ str(learning2014)
 ```
 
 
-## 2.5 Modifying column names
+### 2.5 Modifying column names
 
 Changing all column names to include only lowercase letters.
 
 ```{r}
-colnames(learning2014)
+old_colnames <- colnames(learning2014)
 learning2014 <- learning2014 %>%
   rename("age" = Age, "points" = Points)
-colnames(learning2014)
+new_colnames <- colnames(learning2014)
+
+data.frame(old_colnames, new_colnames) %>% knitr::kable()
 ```
 
 
-## 2.6 Excluding observations
+### 2.6 Excluding observations
 
 Excluding students that did not attend the exam.
 
 ```{r}
+# Filter non-attending students
 learning2014 <- learning2014 %>%
   filter(points > 0)
 ```
@@ -197,39 +204,114 @@ Saving the processed minimal dataframe as a `.csv` file.
 readr::write_csv(learning2014, "data/learning2014.csv")
 ```
 
+*** 
 
-## ***Analysis***
+## **ANALYSIS**
 
-```{r}
+## Get data
+
+> ### Instructions
+> Read the students2014 data into R either from your local folder (if you completed the Data wrangling part) or from this url: https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/learning2014.txt . (The separator is a comma "," and the file includes a header). Explore the structure and the dimensions of the data and describe the dataset briefly, assuming the reader has no previous knowledge of it. There is information related to the data here. (0-2 points)
+
+Let's read in the `students2014.csv` dataset that was produced in the data wrangling part of the *Assignment 2*.
+
+```{r fig.width=7, fig.height=4}
 # Get data
 data <- readr::read_csv("data/learning2014.csv")
 head(data); str(data)
 
-# Check numeric variables
+# Plot data "missingness"
+# Amelia::missmap(data)
+# naniar::vis_miss(data)
+
+# Summaries for numeric variables
 do.call(cbind, lapply(data, summary)) %>%
-  data.frame() %>%
-  select(-gender) %>%
+  data.frame() %>% select(-gender) %>%
   mutate(across(1:6, \(x) as.numeric(x))) %>%
   mutate(across(1:6, \(x) round(x, 1))) %>%
-  knitr::kable() # DT::datatable()
+  t() %>% knitr::kable() # DT::datatable()
 
 # Table gender
-table(data$gender, useNA = "always")
+# table(data$gender, useNA = "always")
 ```
 
+We are dealing with **complete data** with no missing values. Clearly, the four variables `attitude`, `deep`, `stra`, and `surf` represent averaged survey answers on a likert scale. Click here for more comprehensive [metadata](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt). 
+
+
+## 2.7 Visualizations with ggplot2
+
+### Population characteristics
+
+`Age` and `gender`
+
 ```{r}
+p <- data %>% ggplot(aes(x = age, y = gender, color = gender))
+p <- p + ggridges::geom_density_ridges(
+  rel_min_height = .001, quantile_lines = T, quantiles = .5, jittered_points = TRUE,
+  position = "raincloud", point_alpha = .5, point_size = 1, alpha = .3
+)
+# p <- p + theme(legend.position = "none")
+p <- p + scale_x_sqrt(limits = c(0, NA))
+p <- p + labs(title = "Population characteristics")
+p <- p + color_gender()
+p
+
+
+# p <- data %>% ggplot(aes(x = gender, y = age))
+# p <- p + geom_jitter()
+# p
+
+
+```
+
+
+> ### Instructions
+> Show a graphical overview of the data and show summaries of the variables in the data. Describe and interpret the outputs, commenting on the distributions of the variables and the relationships between them. (0-3 points)
+
+
+Let's begin by checking the distributions of our dataset. 
+
+```{r fig.width=7, fig.height=4}
 p <- data %>% pivot_longer(
   cols = colnames(data)[-1],
   values_to = "value",
   names_to = "var"
-) %>% ggplot(aes(x = value, color = var))#, linetype = gender
-p <- p + geom_density()
+) %>% ggplot(aes(x = value, color = var, fill = var, y = var, linetype = gender))#
+p <- p + ggridges::geom_density_ridges(
+  rel_min_height = .001, quantile_lines = T, quantiles = .5, jittered_points = TRUE,
+  position = "raincloud", point_alpha = .5, point_size = 1, alpha = .3
+)
+# p <- p + theme(legend.position = "none")
 p <- p + scale_x_sqrt(limits = c(0, NA))
+p <- p + labs(title = "Distributions")
 p
 ```
 
 
-This dataset also contains a variable called `gender`. It could be hypothesized that attitude, learning strategies and/or exam points differ between the genders. Perhaps `gender` modifies the relationship between learning strategies and exam points. 
+
+
+
+
+### Predictors of exam `points`
+
+There is plausibility that the `attitude` of the students or different learning strategies influence exam `points`. Therefore, let's glance over these potential relationships:
+
+```{r fig.width=5, fig.height=3}
+p <- data %>% pivot_longer(
+  cols = c(attitude, deep, stra, surf),
+  values_to = "answer",
+  names_to = "var"
+) %>% ggplot(aes(x = answer, y = points, color = var))
+p <- p + geom_point(alpha = .5, size = 1)
+p <- p + geom_smooth(method = "lm", se = F)
+p <- p + coord_cartesian(xlim = c(1, 5))
+p
+```
+
+
+### Gender
+
+This dataset also contains a variable called `gender`. It could be hypothesized that attitude, learning strategies and/or exam points differ between the genders.
 
 ```{r fig.height=3, fig.width=6, message=FALSE, warning=FALSE}
 p <- data %>% ggplot(aes(x = gender, fill = gender))
@@ -266,24 +348,10 @@ p1 + p2 + plot_layout(widths = c(.3, 1), guides = 'collect')
 
 ```
 
-There is plausibilitiy that the attitude of the students or different learning strategies influence exam points. Therefore, let's glance over the potential relationships within the data:
 
-```{r fig.width=5, fig.height=4}
-p <- data %>% pivot_longer(
-  cols = c(attitude, deep, stra, surf),
-  values_to = "answer",
-  names_to = "var"
-) %>% ggplot(aes(x = answer, y = points, color = var))
-p <- p + geom_point(alpha = .5, size = 1)
-p <- p + geom_smooth(method = "lm", se = F)
-p <- p + coord_cartesian(xlim = c(1, 5))
-p
-```
+Perhaps `gender` modifies the relationship between learning strategies and exam points. 
 
-
-## 2.7 Visualizations with ggplot2
-
-```{r}
+```{r fig.width=5, fig.height=3}
 p <- data %>%
   ggplot(aes(x = attitude, y = points, col = gender))
 p <- p + geom_point()
@@ -292,6 +360,18 @@ p <- p + ggtitle("Student's attitude versus exam points")
 p <- p + coord_cartesian(xlim = c(1, 5))
 p <- p + color_gender()
 p
+```
+
+
+```{r message=FALSE}
+# Visualize
+# pairs(data[-1])
+data %>% GGally::ggpairs(
+  aes(col = gender, alpha = .3),
+  lower = list(continuous = "smooth")
+) +
+  color_gender() + fill_gender()
+
 ```
 
 
