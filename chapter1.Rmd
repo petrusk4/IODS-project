@@ -1,9 +1,8 @@
-## About the project (1: Start me up!)
+## About the pRoject 
 
-**Hello**, this is my page for the course "*Introduction to open data science, 5 ECTS*". Three friends of mine recommended this course and told great stuff about it. I have 2 years of experience with `R`, but now want to take it to the next level. That's why I'm thrilled to learn `Git`, which I expect from this course.# 1: Start me up!
+**Greetings**, this is my page for the course "*Introduction to open data science, 5 ECTS*". I found this course by a strong recommendation from my friend. I have 2 years of experience with `R`, but now want to take it to the next level with `Git`. I'm thrilled to learn proper version control and use of Github which promotes sharing/publishing code and perhaps networking with other R coders. Alongside these hopes, I anticipate loads of fun from this course! 
 
-
-Lastly, check out my [GitHub-repository](https://github.com/petrusk4/IODS-project). 
+Lastly, check out my [GitHub repository](https://github.com/petrusk4/IODS-project). 
 
 Let's enjoy this interesting course!
 
@@ -20,17 +19,17 @@ p <- data.frame(
 ) %>% ggplot(aes(x = number, y = height, color = factor(number)))
 p <- p + geom_text(aes(label = letter), size = 10, fontface = "bold")
 # p <- p + ggdark::dark_mode(ggthemes::theme_fivethirtyeight())
-p <- p + theme(legend.position = "none")
+p <- p + theme(legend.position = "none", strip.text = element_text(hjust = 0))
 p <- p + harrypotter::scale_color_hp_d("LunaLovegood")
 p <- p + xlab("") + ylab("") + coord_cartesian(ylim = c(0, 2))
-# p <- p + labs(title = "")
+p <- p + labs(caption = "4th November, 2023")
 p <- p + facet_wrap(. ~ "Sincerely, ")
 p
 
 ```
 
 
-## Reflections
+# 1: Start me up!
 
 ### `R` for Health Data Science book
 

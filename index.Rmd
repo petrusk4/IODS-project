@@ -15,7 +15,7 @@ output:
     self_contained: true
     thumbnails: false
     lightbox: true
-    gallery: false
+    gallery: true
     highlight: tango
     code_folding: show #hide
 ---

@@ -4,22 +4,26 @@
 > Describe the work you have done this week and summarize your learning.
 >
 > - Describe your work and results clearly. 
-> - Assume the reader has an introductory course level understanding of > writing and reading R code as well as statistical methods.
+> - Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
 > - Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
 
 ## **DATA WRANGLING**
 
-Sections 2.0--2.6 produce a dataset named `data/learning2014.csv`. For statistical analysis, skip to **section 2.7**.
+Sections 2.0--2.6 produce a dataset named `data/learning2014.csv`. For statistical analysis, **skip to section 2.7**.
 
 **List of sections**
 
 - 2.0 Packages
 - 2.1 Reading data from the web
-- 
+- 2.2 Scaling variables
+- 2.3 Combining variables
+- 2.4 Selecting columns
+- 2.5 Modifying column names
+- 2.6 Excluding observations
 
-### 2.0-- 2.6 Packages
+### 2.1 Packages and functions
 
-Let's first load the required packages.
+Let's first load the required packages and define some custom functions.
 
 ```{r}
 # Packages
@@ -43,18 +47,14 @@ theme_darkmode <- function(){
 
 # Beautiful labels
 make_labs <- function (data, var) {
-  data %>%
-    mutate(
-      lab = case_when(
-        .data[[var]] == "age" ~ "Age",
-        .data[[var]] == "attitude" ~ "Attitude",
-        .data[[var]] == "points" ~ "Exam points",
-        .data[[var]] == "deep" ~ "Deep learning",
-        .data[[var]] == "stra" ~ "Strategic learning",
-        .data[[var]] == "surf" ~ "Surface learning",
-      )
-    ) %>%
-    return()
+  data %>% mutate(lab = case_when(
+    .data[[var]] == "age" ~ "Age",
+    .data[[var]] == "attitude" ~ "Attitude",
+    .data[[var]] == "points" ~ "Exam points",
+    .data[[var]] == "deep" ~ "Deep learning",
+    .data[[var]] == "stra" ~ "Strategic learning",
+    .data[[var]] == "surf" ~ "Surface learning",
+  )) %>% return()
 }
 ```
 
@@ -71,20 +71,13 @@ dim(lrn14)
 ```
 
 
-### Observations from the data:
-
 - Looks like the `lrn14` dataset has `r nrow(lrn14)` rows and `r ncol(lrn14)` columns.
 - Most columns appear to be intergers, whereas only `gender` is character.
 
 
 ### 2.2 Scaling variables
 
-> ### Instructions
-> - Execute the example codes to see how vectorized division works
-> - Use vector division to create a new column `attitude` in the `lrn14` data frame, where each observation of `Attitude` is scaled back to the original scale of the questions, by dividing it with the number of questions.
-> 
-> Hint:
-> - Assign 'Attitude divided by 10' to the new column 'attitude.
+Returning variable `Attitude` to its original scale between 1--5 (likert scale).
 
 ```{r fig.width=7, fig.height=2}
 # Scale the attitude variable to match other variables
@@ -92,38 +85,27 @@ lrn14 <- lrn14 %>%
   mutate(attitude = Attitude / 10)
 
 # Check the distributions
-ggpubr::ggarrange(
-  # Density
-  lrn14 %>% ggplot(aes(x = attitude)) + geom_density() +
-    coord_cartesian(xlim = c(0, 6)),
-  # Sina
-  lrn14 %>%
-    pivot_longer(
-      cols = c(Attitude, attitude),
-      names_to = "var",
-      values_to = "value"
-    ) %>% ggplot(aes(y = value, x = var)) +
-    ggforce::geom_sina(size = .1, alpha = .5) +
-    scale_y_sqrt() +
-    geom_boxplot(width = .2, fill = NA, notch = T)
-)
-  
+# ggpubr::ggarrange(
+#   # Density
+#   lrn14 %>% ggplot(aes(x = attitude)) + geom_density() +
+#     coord_cartesian(xlim = c(0, 6)),
+#   # Sina
+#   lrn14 %>%
+#     pivot_longer(
+#       cols = c(Attitude, attitude),
+#       names_to = "var",
+#       values_to = "value"
+#     ) %>% ggplot(aes(y = value, x = var)) +
+#     ggforce::geom_sina(size = .1, alpha = .5) +
+#     scale_y_sqrt() +
+#     geom_boxplot(width = .2, fill = NA, notch = T)
+# )
 ```
 
 
 ### 2.3 Combining variables
 
 Computing row means for each class of questions in a for-loop.
-
-> ### Instructions
-> - Access the **dplyr** library
-> - Execute the example codes to create the combination variables 'deep' and 'surf' as columns in `lrn14`
-> - Select the columns related to strategic learning from `lrn14`
-> - Create the combination variable 'stra' as a column in `lrn14`
-
-> Hints:
-> - Columns related to strategic learning are in the object `strategic_questions`. Use it for selecting the correct columns.
-> - Use the function `rowMeans()` identically to the examples
 
 ```{r}
 # Classify questions
@@ -144,21 +126,6 @@ stra <- c(
 for (Qclass in c("deep", "surf", "stra")) {
   lrn14[[Qclass]] <- rowMeans(lrn14[, get(Qclass)])
 }
-
-# Same thing, without creating new objects in the environment
-# lrn14 <- lrn14 %>%
-#   rowwise() %>%
-#   mutate(
-#     deep = mean(c( # Deep questions
-#       D03, D11, D19, D27, D07, D14, D22, D30, D06, D15, D23, D31
-#     )),
-#     surf = mean(c( # Surface questions
-#       SU02, SU10, SU18, SU26, SU05, SU13, SU21, SU29, SU08, SU16, SU24, SU32
-#     )),
-#     stra = mean(c( # Strategic questions
-#       ST01, ST09, ST17, ST25, ST04, ST12, ST20, ST28
-#     ))
-#   ) %>% ungroup()
 ```
 
 
@@ -166,31 +133,12 @@ for (Qclass in c("deep", "surf", "stra")) {
 
 Dropping individual question data and only keeping variables relevant for the analysis.
 
-> ### Instructions
-> - Access the **dplyr** library
-> - Create object `keep_columns`
-> - Use `select()` (possibly together with `one_of()`) to create a new data frame `learning2014` with the columns named in `keep_columns`.
-> - Look at the structure of the new dataset
-> 
-> Hint:
-> - See the previous exercise or the data wrangling cheatsheet for help on how to select columns
-
 ```{r}
 # Pick relevant vars
-keep_columns <- c(
-  "gender",
-  "Age",
-  "attitude",
-  "deep",
-  "stra",
-  "surf",
-  "Points"
-)
+keep_columns <- c("gender", "Age", "attitude", "deep", "stra", "surf", "Points")
 
 # Drop useless vars
-learning2014 <- lrn14 %>% select(
-  all_of(keep_columns)
-)
+learning2014 <- lrn14[, keep_columns]
 
 # See structure
 str(learning2014)
@@ -199,15 +147,14 @@ str(learning2014)
 
 ### 2.5 Modifying column names
 
-Changing all column names to include only lowercase letters.
+Harmonizing all column names to include only lowercase letters.
 
 ```{r}
-old_colnames <- colnames(learning2014)
+# old_colnames <- colnames(learning2014)
 learning2014 <- learning2014 %>%
   rename("age" = Age, "points" = Points)
-new_colnames <- colnames(learning2014)
-
-data.frame(old_colnames, new_colnames) %>% knitr::kable()
+# new_colnames <- colnames(learning2014)
+# data.frame(old_colnames, new_colnames) %>% knitr::kable()
 ```
 
 
@@ -235,26 +182,25 @@ readr::write_csv(learning2014, "data/learning2014.csv")
 
 ## **ANALYSIS**
 
-## Get data
+This part describes the statistical analysis of `learning2014` dataset.
 
-> ### Instructions
-> Read the students2014 data into R either from your local folder (if you completed the Data wrangling part) or from this url: https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/learning2014.txt . (The separator is a comma "," and the file includes a header). Explore the structure and the dimensions of the data and describe the dataset briefly, assuming the reader has no previous knowledge of it. There is information related to the data here. (0-2 points)
+### Get data
 
-Let's read in the `students2014.csv` dataset and check that it is read correctly.
+Let's read in the `learning2014.csv` dataset and check that it is read correctly.
 
 ```{r fig.width=7, fig.height=2}
-# Get data
+# Read data
 data <- readr::read_csv("data/learning2014.csv", show_col_types = F)
 
 # Glance at the data
 # data %>% head() %>% knitr::kable()
-str(data)
+str(data, give.attr = F)
 
 # Plot data missingness
 naniar::vis_miss(data) + theme_darkmode() + ggtitle("Missingness map")
 ```
 
-There are a total of **166 observations** and **7 variables**. We are dealing with **complete data** with no missing values. To note, there is no subject identifier. These may not be needed as we do not have repeated measures. The variables can be divided to the types below. Click here for more comprehensive [metadata](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt).
+There are a total of **166 observations** and **7 variables**. We are dealing with **complete data** with no missing values. The variables can be divided to the types below (click here for more comprehensive [metadata](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-meta.txt)).
 
 #### Population characteristics
 
@@ -275,6 +221,8 @@ Clearly, the four variables `attitude`, `deep`, `stra`, and `surf` represent sur
 
 - `points`: Results of the statistics exam. I did not find the maximum possible value from the metadata. Before the analysis, students that did not attend the exam (points == 0) were excluded from the dataset.
 
+To note, these data lack subject identifier (ID) variable. However, it may not be needed as we do not have repeated measures. 
+
 
 ### Summaries
 
@@ -289,11 +237,16 @@ do.call(cbind, lapply(data, summary)) %>%
   t() %>% knitr::kable() # DT::datatable()
 ```
 
-Let's also see the distribution of `gender`. Later we'll probably also see whether `gender` modifies the relationship between `attitude`/learning and exam `points`.
+Let's also see the distribution of `gender`. It appears that most students (66%) are female. On average, male students are `r round(mean(data$age[which(data$gender == "M")]) - mean(data$age[which(data$gender == "F")]), 1)` older than female students. Later we'll probably also see whether `gender` modifies the relationship between `attitude`/learning and exam `points`.
 
 ```{r}
-data %>% count(gender) %>%
+data %>% group_by(gender) %>%
+  summarise(
+    n = sum(!is.na(gender)),
+    age_mean_sd = paste0(round(mean(age), 1), " (", round(sd(age), 1), ")")
+  ) %>%
   mutate(pct = scales::percent(n / sum(n))) %>%
+  select(gender, n, pct, everything()) %>%
   knitr::kable()
 ```
 
@@ -320,10 +273,12 @@ p <- data %>% pivot_longer(
   make_labs(data = ., var = "var") %>%
   ggplot(aes(x = value, color = lab, fill = lab, y = lab, linetype = gender))
 p <- p + ggridges::geom_density_ridges(
+  aes(point_shape = gender),
   rel_min_height = .001, quantile_lines = T, quantiles = .5,
   jittered_points = TRUE, position = "raincloud",
-  point_alpha = .5, point_size = 1, alpha = .3
+  point_alpha = .5, point_size = 2, alpha = .3
 )
+p <- p + scale_shape_manual(values = c(0, 2))
 
 breakx <- c(1, 5, seq(10, 60, by = 10))
 p <- p + scale_x_sqrt(breaks = breakx, labels = breakx)
@@ -357,7 +312,7 @@ p <- p + labs(title = "Potential predictors for good or bad exam success") +
 p
 ```
 
-Interestingly, `attitude` shows positive relationship with exam `points`, whereas `surf`ace learning may be negatively associated with `points`. 
+Intuitively and as hypothesized, `attitude` shows positive relationship with exam `points`, whereas `surf`ace learning may be negatively associated with `points`. The first does not however imply that attitude is *causal* for success, as there could be a confounder (e.g., competence) that associates with attitude and *causes* good exam points. The link between surface learning and poor exam points is surprising, as surface learning is focused precisely around the exam. However, whether these associations are statistically significant requires testing!
 
 
 ### Gender differences
@@ -374,18 +329,18 @@ plotdata <- data %>%
   )
 # Calculate 95% CIs
 for (i in 1:nrow(plotdata)) {
-  plotdata$Lower[i] <-
-    Hmisc::binconf(x = plotdata$n[i], n = sum(plotdata$n))[[2]] *
-    sum(plotdata$n)
-  plotdata$Upper[i] <-
-    Hmisc::binconf(x = plotdata$n[i], n = sum(plotdata$n))[[3]] *
-    sum(plotdata$n)
+  plotdata$Lower[i] <- Hmisc::binconf(
+    x = plotdata$n[i], n = sum(plotdata$n)
+  )[[2]] * sum(plotdata$n)
+  plotdata$Upper[i] <- Hmisc::binconf(
+    x = plotdata$n[i], n = sum(plotdata$n)
+  )[[3]] * sum(plotdata$n)
 }
 # Plot
 p <- plotdata %>%
   ggplot(aes(x = gender, y = n, fill = gender))
 p <- p + geom_col(width = .5)
-p <- p + geom_errorbar(width = .1, aes(ymin = Lower, ymax = Upper))
+p <- p + geom_errorbar(width = .2, aes(ymin = Lower, ymax = Upper))
 p <- p + geom_text(aes(y = Upper, label = paste0(pct, "\n")))
 p <- p + fill_gender()
 p <- p + scale_y_continuous(expand = expansion(mult = c(0, .1)))
@@ -420,23 +375,44 @@ p2 <- p
 ggpubr::ggarrange(p1, p2, legend = "none", widths = c(.3, 1), labels = "AUTO")
 ```
 
-As observed from the plots, 
+As observed from the plots, male students are the minority on the course and they are significantly older than female students. Men have significantly more positive attitude on statistics. Strategic learning does not differ between genders despite quite small $p$ value.
 
-### Influence of gender (learning × gender interactions)
 
-Perhaps `gender` modifies the relationship between learning strategies and exam points. 
+### Influence of gender (interactions)
 
-```{r fig.width=5, fig.height=3}
-p <- data %>%
-  ggplot(aes(x = attitude, y = points, col = gender))
-p <- p + geom_point()
-p <- p + geom_smooth(method = "lm")
-p <- p + ggtitle("Student's attitude versus exam points")
-p <- p + coord_cartesian(xlim = c(1, 5))
-p <- p + color_gender()
-p
+Perhaps `gender` modifies the relationship between learning strategies and exam points -- let's entertain this idea. 
+
+```{r fig.height=6, fig.width=10, message=FALSE}
+# Define independent variables
+traits <- tribble(
+  ~var, ~lab, ~unit, ~zoomx,
+  "age", "age", "Years", c(10, 60),
+  "attitude", "attitude", "Averaged answer", c(1, 5),
+  "deep", "deep learning", "Averaged answer", c(1, 5),
+  "stra", "strategic learning", "Averaged answer", c(1, 5),
+  "surf", "surface learning", "Averaged answer", c(1, 5)
+)
+
+# Plot in a loop
+plist <- lapply(1:nrow(traits), function (i) {
+  p <- data %>%
+    ggplot(aes(x = .data[[traits$var[i]]], y = points, col = gender, fill = gender))
+  p <- p + geom_point(size = .5, alpha = .5)
+  p <- p + geom_smooth(method = "lm")
+  p <- p + ggtitle(paste0("Student's ", traits$lab[[i]], "\nversus exam points"))
+  p <- p + coord_cartesian(xlim = traits$zoomx[[i]])
+  p <- p + xlab(traits$unit[[i]]) + ylab("Exam points")
+  p <- p + color_gender() + fill_gender()
+  p
+})
+# Combine plots into a panel
+plist[[1]] + plist[[2]] + plist[[3]] + plist[[4]] + plist[[5]] +
+  plot_layout(guides = "collect")
 ```
 
+The slopes for men and women seem quite similar. If anything, aging might hinder men's exam success, whereas women do not experience age-related decline in exam points.
+
+Finally, lets make a "monster plot" of all the relationships within the data.
 
 ```{r message=FALSE}
 # Visualize
@@ -449,8 +425,12 @@ data %>% GGally::ggpairs(
 
 ```
 
+Here it is demonstrated that the strongest correlation is observed between `attitude` and `points`. In men, there is a strong inverse correlation between surface and deep learning, whereas such phenomenon doesn't exist in women. This implies that women may employ both strategies simultaneously, whereas in men these two strategies may be mutually exclusive. 
+
 
 ## 2.8 Exploring a data frame
+
+
 
 ## 2.9 Simple regression
 
