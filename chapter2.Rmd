@@ -480,7 +480,6 @@ while (max(m1_s$coefficients[-1, "Pr(>|t|)"]) > 0.05) {
   } else {print("All predictors NS"); break}
 }
 dropped <- bind_rows(results); dropped %>% knitr::kable()
-m1_s
 ```
 
 Both `gender` and `age` were dropped out one by one due to their non-significant contribution to the model. Let's see if this this decision replicates with official `rms::fastbw` function for backward variable selection:
@@ -493,15 +492,25 @@ m_ols <- rms::ols(points ~ attitude + age + gender, data)
 rms::fastbw(m_ols, rule = "p")
 ```
 
+Yup, we got the same result -- the only predictor left in the model is `attitude.` Let's look at the final model:
 
-### Interpretation
+```{r}
+# Final model
+m1_s
+```
 
-Yup, we got the same result -- the only predictor left in the model is `attitude.` In this model its coefficient is 3.5, which means that each one unit increase in `attitude` corresponds to 3.5 `points` higher exam score. The intercept means that in case `attitude` was zero, the amount of exam `points` would be 11.6. However, this is only theoretical as zero is outside of the likert scale's range (1--5).
+In this model, coefficient for `attitude` is 3.5, which means that each one unit increase in `attitude` corresponds to 3.5 `points` higher exam score. The intercept means that in case `attitude` was zero, the amount of exam `points` would be 11.6. However, this is only theoretical as zero is outside of the likert scale's range (1--5).
 
 R-squared values (both multiple and adjusted = 0.19) show that only a small amount of variation (19%) in exam score can be explained by attitude. This is understandable as a lot of other things, and also our methods of measuring attitude could be imperfect.
 
 
 ## 2.11 Graphical model validation
+
+Linear regression has a few key assumptions:
+
+- **Linear** relationship between the predictor `x` and response `y`.
+- **Normality** of the residuals.
+- **Homoscedasticity**: the residuals are assumed to have constant variance.
 
 Let's see if our assumptions hold.
 
@@ -514,13 +523,34 @@ ggplot(model.diag.metrics, aes(attitude, points)) +
   stat_smooth(color = "white", method = lm, se = FALSE)
 
 
-m1_diag <- ggplot2::autoplot(m1)
+m1_diag <- ggplot2::autoplot(m1, colour = "white", size = .5)
 m1_diag
-
 ```
 
 
+- The **"Residuals vs Fitted"** plot shows a horizontal line, without distinct patterns, which indicates that the predictor and response variables have a linear relationship.
+- In the **Normal Q-Q** plot, standardized residuals roughly follow the dashed line and deviate only at extreme quantiles.
+- The **Scale-Location** plot shows that residuals spread roughly equally along the range of the predictor, indicating that variances are constant.
+- The **Residuals vs Leverage** plot identifies two observations that have standardized residuals greater than absolute value 3, which are possible outliers.
+
+To conclude, the model assumptions hold up quite good.
+
+
 ## 2.12 Making predictions
+
+```{r}
+m1
+new_attitudes <- c("Mia" = 3.8, "Mike" = 4.4, "Riikka" = 2.2, "Pekka" = 2.9)
+new_data <- data.frame(attitude = new_attitudes)
+new_data
+
+# Print out the new data
+
+
+# Predict the new students exam points based on attitude
+predict(m1, newdata = new_data)
+
+```
 
 
 
