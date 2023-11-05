@@ -412,7 +412,10 @@ plist[[1]] + plist[[2]] + plist[[3]] + plist[[4]] + plist[[5]] +
 
 The slopes for men and women seem quite similar. If anything, aging might hinder men's exam success, whereas women do not experience age-related decline in exam points.
 
-Finally, lets make a "monster plot" of all the relationships within the data.
+
+## 2.8 Exploring a data frame
+
+Lets make a "monster plot" of all the relationships within the data.
 
 ```{r message=FALSE}
 # Visualize
@@ -422,20 +425,109 @@ data %>% GGally::ggpairs(
   lower = list(continuous = "smooth")
 ) +
   color_gender() + fill_gender()
-
 ```
 
 Here it is demonstrated that the strongest correlation is observed between `attitude` and `points`. In men, there is a strong inverse correlation between surface and deep learning, whereas such phenomenon doesn't exist in women. This implies that women may employ both strategies simultaneously, whereas in men these two strategies may be mutually exclusive. 
 
 
-## 2.8 Exploring a data frame
-
-
-
 ## 2.9 Simple regression
+
+
+
 
 ## 2.10 Multiple regression
 
+Let's fit a regression model that looks at the association between `attitude` and exam `points` adjusted for `age` and `gender`.
+
+```{r}
+# Define formula
+response <- "points"
+IVs <- c("attitude", "age", "gender")
+formula <- paste0(response, " ~ ", paste(IVs, collapse = " + "))
+
+# Run initial model
+m1 <- lm(formula, data)
+m1_s <- summary(m1)
+m1_s
+```
+
+Only `attitude` is significant in our model. Let's remove non-significant predictors one by one and do it efficiently in a loop.
+
+```{r}
+# Drop useless covariates in a loop
+results <- list(); models <- list()
+while (max(m1_s$coefficients[-1, "Pr(>|t|)"]) > 0.05) {
+  
+  # Identify the most non-significant covariate
+  nonsig <- with(m1_s, rownames(coefficients)[
+    coefficients[, "Pr(>|t|)"] == max(coefficients[, "Pr(>|t|)"])
+  ]); nonsigF <- nonsig # Save "raw" covariate with factor level
+  
+  # Remove factor value characters
+  while (!(nonsig %in% colnames(data))) { 
+    nonsig <- substr(nonsig, 1, nchar(nonsig)-1)
+  }
+  # Store non-significant covariate
+  results[[nonsigF]] <- data.frame(
+    Dropped = nonsigF,
+    P = m1_s$coefficients[nonsigF, "Pr(>|t|)"] %>% signif(3)
+  )
+  # Remove covariates from model one by one
+  IVs <- IVs[!(IVs %in% nonsig)]
+  if (length(IVs > 0)) {
+    formula <- paste0(response, " ~ ", paste(IVs, collapse = " + "))
+    m1 <- lm(formula, data); m1_s <- summary(m1)
+  } else {print("All predictors NS"); break}
+}
+dropped <- bind_rows(results); dropped %>% knitr::kable()
+m1_s
+m1 %>% gtsummary::tbl_regression()
+
+```
+
+Both `gender` and `age` were dropped out one by one due to their non-significant contribution to the model. Let's see if this this decision replicates with official `rms::fastbw` function for backward variable selection:
+
+```{r}
+# Run initial model
+m_ols <- rms::ols(points ~ attitude + age + gender, data)
+
+# Backward variable selection based on p value
+rms::fastbw(m_ols, rule = "p")
+```
+
+Yup, we got the same result -- the only predictor left in the model is `attitude.` In this model its coefficient is 3.5, which means that each one unit increase in `attitude` corresponds to 3.5 `points` higher exam score. The intercept means that in case `attitude` was 0, the amount of exam `points` would be 11.6. However, this is only theoretical as 0 is outside of the likert scale's range.
+
+R-squared values (both multiple and adjusted = 0.19) show that only a small amount of variation (19%) in exam score can be explained by attitude. This is understandable as a lot of other things, and also our methods of measuring attitude could be imperfect.
+
+
 ## 2.11 Graphical model validation
 
+Let's see if our assumptions hold.
+
+```{r fig.width=4, fig.height=3}
+
+
+
+```
+
+```{r fig.width=6, fig.height=5}
+# Residuals
+model.diag.metrics <- broom::augment(m1)
+ggplot(model.diag.metrics, aes(attitude, points)) +
+  geom_point() +
+  stat_smooth(method = lm, se = FALSE) +
+  geom_segment(aes(xend = attitude, yend = .fitted), color = "red", size = 0.3)
+
+require(ggfortify)
+ggplot2::autoplot(m1)
+
+
+
+```
+
+
+
 ## 2.12 Making predictions
+
+
+

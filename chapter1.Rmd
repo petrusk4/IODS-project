@@ -1,4 +1,4 @@
-## About the pRoject 
+## About the p**R**oject 
 
 **Greetings**, this is my page for the course "*Introduction to open data science, 5 ECTS*". I found this course by a strong recommendation from my friend. I have 2 years of experience with `R`, but now want to take it to the next level with `Git`. I'm thrilled to learn proper version control and use of Github which promotes sharing/publishing code and perhaps networking with other R coders. Alongside these hopes, I anticipate loads of fun from this course! 
 
