@@ -1,5 +1,7 @@
 # 2: Regression and model validation
 
+This part describes the statistical analysis of `learning2014` dataset.
+
 > ### Instructions
 > Describe the work you have done this week and summarize your learning.
 >
@@ -7,10 +9,9 @@
 > - Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
 > - Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
 
+## Setup
 
-## **ANALYSIS**
-
-This part describes the statistical analysis of `learning2014` dataset.
+First let's load our packages and some custom functions.
 
 ```{r}
 # Packages
@@ -18,12 +19,12 @@ pacman::p_load(tidyverse, GGally, patchwork, ggfortify)
 
 ## Defining some custom functions
 # Colors
-color_gender <- function () {scale_color_manual(values = rev(c("dodgerblue", "orangered")))}
-fill_gender <- function () {scale_fill_manual(values = rev(c("dodgerblue", "orangered")))}
+colorpair <- c("orangered", "dodgerblue")
+color_gender <- \ () {scale_color_manual(values = colorpair)}
+fill_gender <- \ () {scale_fill_manual(values = colorpair)}
 
 # Dark mode theme
-backg <- "#141415"
-theme_darkmode <- function(){
+theme_darkmode <- \ (backg = "#141415") {
   ggdark::dark_theme_gray() %+replace% 
     ggplot2::theme(
       plot.background = element_rect(color = backg, fill = backg),
@@ -34,22 +35,25 @@ theme_darkmode <- function(){
 }
 
 # Beautiful labels
-make_labs <- function (data, var) {
-  data %>% mutate(lab = case_when(
-    .data[[var]] == "age" ~ "Age",
-    .data[[var]] == "attitude" ~ "Attitude",
-    .data[[var]] == "points" ~ "Exam points",
-    .data[[var]] == "deep" ~ "Deep learning",
-    .data[[var]] == "stra" ~ "Strategic learning",
-    .data[[var]] == "surf" ~ "Surface learning",
-  )) %>% return()
-}
+labs <- tribble(
+  ~var, ~lab,
+  "age", "Age",
+  "attitude", "Attitude",
+  "points", "Exam points",
+  "deep", "Deep learning",
+  "stra", "Strategic learning",
+  "surf", "Surface learning"
+)
 ```
 
 
-### Get data
+## 1. Get and explore data
 
-Let's read in the `learning2014.csv` dataset and check that it is read correctly.
+> ### Instructions
+> Read the students2014 data into R --.
+> Explore the structure and the dimensions of the data and describe the dataset briefly, assuming the reader has no previous knowledge of it. 
+
+Let's read in the `learning2014` dataset and check that it is read correctly.
 
 ```{r fig.width=7, fig.height=2}
 # Read data
@@ -90,45 +94,12 @@ Clearly, the four variables `attitude`, `deep`, `stra`, and `surf` represent sur
 To note, these data lack subject identifier (ID) variable. However, it may not be needed as we do not have repeated measures. 
 
 
-### Summaries
-
-Let's summarize the numerical variables. 
-
-```{r}
-# Summaries for numeric variables
-do.call(cbind, lapply(data, summary)) %>%
-  data.frame() %>% select(-gender) %>%
-  mutate(across(1:6, \(x) as.numeric(x))) %>%
-  mutate(across(1:6, \(x) round(x, 1))) %>%
-  t() %>% knitr::kable() # DT::datatable()
-```
-
-Let's also see the distribution of `gender`. It appears that most students (66%) are female. On average, male students are `r round(mean(data$age[which(data$gender == "M")]) - mean(data$age[which(data$gender == "F")]), 1)` older than female students. Later we'll probably also see whether `gender` modifies the relationship between `attitude`/learning and exam `points`.
-
-```{r}
-data %>% group_by(gender) %>%
-  summarise(
-    n = sum(!is.na(gender)),
-    age_mean_sd = paste0(round(mean(age), 1), " (", round(sd(age), 1), ")")
-  ) %>%
-  mutate(pct = scales::percent(n / sum(n))) %>%
-  select(gender, n, pct, everything()) %>%
-  knitr::kable()
-```
-
-
-
-
-
-## 2.7 Visualizations with `ggplot2`
+## 2. Graphical overwiew
 
 > ### Instructions
 > Show a graphical overview of the data and show summaries of the variables in the data. Describe and interpret the outputs, commenting on the distributions of the variables and the relationships between them. (0-3 points)
 
-
-### Distributions
-
-Let's begin by visually inspecting the distributions of our dataset.
+Let's visualize the distributions of our dataset with `ggplot2`.
 
 ```{r fig.height=4, fig.width=7, message=FALSE, warning=FALSE}
 p <- data %>% pivot_longer(
@@ -136,7 +107,7 @@ p <- data %>% pivot_longer(
   values_to = "value",
   names_to = "var"
 ) %>%
-  make_labs(data = ., var = "var") %>%
+  left_join(labs) %>%
   ggplot(aes(x = value, color = lab, fill = lab, y = lab, linetype = gender))
 p <- p + ggridges::geom_density_ridges(
   aes(point_shape = gender),
@@ -158,6 +129,33 @@ p
 **Likert-scale variables** are quite evenly spread on the range of 1--5. It appears that these students are `deep` learners more so than surface learners (`surf`). By visual inspection, men have more positive `attitude` towards statistics than women. Students tend to be of quite **young** `age` although a few older students skew the distribution heavily to the right. It also seems like men may be slightly older than female students. Whether these differences are statistically significant would require further testing...
 
 
+### Numerical summaries
+
+Let's summarize the numerical variables. 
+
+```{r}
+# Summaries for numeric variables
+do.call(cbind, lapply(data, summary)) %>%
+  data.frame() %>% select(-gender) %>%
+  mutate(across(1:6, \ (x) as.numeric(x))) %>%
+  mutate(across(1:6, \ (x) round(x, 1))) %>%
+  t() %>% knitr::kable() # DT::datatable()
+```
+
+Let's also see the distribution of `gender`. It appears that most students (66%) are female. On average, male students are `r round(mean(data$age[which(data$gender == "M")]) - mean(data$age[which(data$gender == "F")]), 1)` years older than female students. Later we'll probably also see whether `gender` modifies the relationship between `attitude`/learning and exam `points`.
+
+```{r}
+data %>% group_by(gender) %>%
+  summarise(
+    n = sum(!is.na(gender)),
+    age_mean_sd = paste0(round(mean(age), 1), " (", round(sd(age), 1), ")")
+  ) %>%
+  mutate(pct = scales::percent(n / sum(n))) %>%
+  select(gender, n, pct, everything()) %>%
+  knitr::kable()
+```
+
+
 ### Predictors of exam `points`
 
 It is plausibile that students' `attitude` or learning strategies influence exam `points`. Therefore, let's glance over these potential relationships:
@@ -168,12 +166,12 @@ p <- data %>% pivot_longer(
   values_to = "answer",
   names_to = "var"
 ) %>%
-  make_labs(var = "var") %>%
+  left_join(labs) %>%
   ggplot(aes(x = answer, y = points, color = lab))
 p <- p + geom_point(alpha = .5, size = .5)
 p <- p + geom_smooth(method = "lm", se = F)
 p <- p + coord_cartesian(xlim = c(1, 5))
-p <- p + labs(title = "Potential predictors for good or bad exam success") +
+p <- p + labs(title = "Predictors for good or bad exam success") +
   xlab("Average answer for the set of questions") + ylab("Exam points")
 p
 ```
@@ -219,7 +217,7 @@ p <- data %>% pivot_longer(
   values_to = "value",
   names_to = "var"
 ) %>%
-  make_labs(var = "var") %>%
+  left_join(labs) %>%
   ggplot(aes(y = value, x = gender, color = gender))
 p <- p + geom_violin(fill = "white", color = NA, alpha = .1)
 p <- p + ggforce::geom_sina(size = .5)
@@ -246,7 +244,7 @@ As observed from the plots, male students are the minority on the course and the
 
 ### Influence of gender (interactions)
 
-Perhaps `gender` modifies the relationship between learning strategies and exam points -- let's entertain this idea. 
+Perhaps `gender` modifies the relationship between learning strategies and exam points -- let's entertain this idea (without making regression models with interactions yet). 
 
 ```{r fig.height=6, fig.width=10, message=FALSE}
 # Define independent variables
@@ -279,7 +277,6 @@ plist[[1]] + plist[[2]] + plist[[3]] + plist[[4]] + plist[[5]] +
 The slopes for men and women seem quite similar. If anything, aging might hinder men's exam success, whereas women do not experience age-related decline in exam points.
 
 
-## 2.8 Exploring a data frame
 
 Lets make a "monster plot" of all the relationships within the data.
 
@@ -296,14 +293,12 @@ data %>% GGally::ggpairs(
 Here it is demonstrated that the strongest correlation is observed between `attitude` and `points`. In men, there is a strong inverse correlation between surface and deep learning, whereas such phenomenon doesn't exist in women. This implies that women may employ both strategies simultaneously, whereas in men these two strategies may be mutually exclusive. 
 
 
-## 2.9 Simple regression
+## 3. Regression model
 
+> ### Instructions
+> Choose three variables as explanatory variables and fit a regression model where exam points is the target (dependent, outcome) variable. Show a summary of the fitted model and comment and interpret the results. Explain and interpret the statistical test related to the model parameters.
 
-
-
-## 2.10 Multiple regression
-
-Let's fit a regression model that looks at the association between `attitude` and exam `points` adjusted for `age` and `gender`.
+Next I will fit a regression model that looks at the association between `attitude` and exam `points` adjusted for `age` and `gender`.
 
 ```{r}
 # Define formula
@@ -316,6 +311,9 @@ m1 <- lm(formula, data)
 m1_s <- summary(m1)
 m1_s
 ```
+
+> ### Instructions
+> If an explanatory variable in your model does not have a statistically significant relationship with the target variable, remove the variable from the model and fit the model again without it.
 
 Only `attitude` is significant in our model. Let's remove non-significant predictors one by one and do it efficiently in a loop.
 
@@ -358,7 +356,15 @@ m_ols <- rms::ols(points ~ attitude + age + gender, data)
 rms::fastbw(m_ols, rule = "p")
 ```
 
-Yup, we got the same result -- the only predictor left in the model is `attitude.` Let's look at the final model:
+Yup, we got the same result -- the only predictor left in the model is `attitude.` Thus, in the final model we'll predict exam `points` with only `attitude`.
+
+
+## 4. Interpretation
+
+> ### Instructions
+> Using a summary of your fitted model, explain the relationship between the chosen explanatory variables and the target variable (interpret the model parameters). Explain and interpret the multiple R-squared of the model. (0-3 points)
+
+Let's look at the final model:
 
 ```{r}
 # Final model
@@ -370,7 +376,10 @@ In this model, coefficient for `attitude` is 3.5, which means that each one unit
 R-squared values (both multiple and adjusted = 0.19) show that only a small amount of variation (19%) in exam score can be explained by attitude. This is understandable as a lot of other things, and also our methods of measuring attitude could be imperfect.
 
 
-## 2.11 Graphical model validation
+## 5. Graphical model validation
+
+> ### Instructions
+> Produce the following diagnostic plots: Residuals vs Fitted values, Normal QQ-plot and Residuals vs Leverage. Explain the assumptions of the model and interpret the validity of those assumptions based on the diagnostic plots
 
 Linear regression has a few key assumptions:
 
@@ -384,11 +393,14 @@ Let's see if our assumptions hold.
 # Residuals
 model.diag.metrics <- broom::augment(m1)
 ggplot(model.diag.metrics, aes(attitude, points)) +
-  geom_segment(aes(xend = attitude, yend = .fitted), color = "gray50") +
+  geom_segment(
+    aes(xend = attitude, yend = .fitted),
+    color = "orangered2", alpha = .7
+  ) +
   geom_point() +
   stat_smooth(color = "white", method = lm, se = FALSE)
 
-
+# The actual diagnostic plots
 m1_diag <- ggplot2::autoplot(m1, colour = "white", size = .5)
 m1_diag
 ```
@@ -400,23 +412,3 @@ m1_diag
 - The **Residuals vs Leverage** plot identifies two observations that have standardized residuals greater than absolute value 3, which are possible outliers.
 
 To conclude, the model assumptions hold up quite good.
-
-
-## 2.12 Making predictions
-
-```{r}
-m1
-new_attitudes <- c("Mia" = 3.8, "Mike" = 4.4, "Riikka" = 2.2, "Pekka" = 2.9)
-new_data <- data.frame(attitude = new_attitudes)
-new_data
-
-# Print out the new data
-
-
-# Predict the new students exam points based on attitude
-predict(m1, newdata = new_data)
-
-```
-
-
-
