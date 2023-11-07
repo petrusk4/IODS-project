@@ -103,5 +103,5 @@ learning2014 <- learning2014 %>%
 # Saving the processed minimal dataframe as a `.csv` file.
 readr::write_csv(
   learning2014,
-  paste0("data/learning2014_", Sys.Date(), ".csv")
+  paste0("data/learning/learning2014_", Sys.Date(), ".csv")
 )

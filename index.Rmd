@@ -45,3 +45,6 @@ ggdark::dark_theme_gray() %+replace%
 
 ```{r child = "chapter2.Rmd"}
 ```
+
+```{r child = "chapter3.Rmd"}
+```

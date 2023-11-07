@@ -1,4 +1,4 @@
-# 2: Regression and model validation
+# 2 Regression and model validation
 
 This part describes the statistical analysis of `learning2014` dataset.
 
@@ -47,7 +47,7 @@ labs <- tribble(
 ```
 
 
-## 1. Get and explore data
+## 2.1 Get and explore data
 
 > ### Instructions
 > Read the students2014 data into R --.
@@ -57,7 +57,7 @@ Let's read in the `learning2014` dataset and check that it is read correctly.
 
 ```{r fig.width=7, fig.height=2}
 # Read data
-datasets <- list.files("data", full.names = T)
+datasets <- list.files("data/learning/", full.names = T)
 newest <- datasets %>% sub('.*_', '', .) %>% as.Date() %>% max()
 data <- datasets[grepl(newest, datasets)] %>%
   readr::read_csv(show_col_types = F)
@@ -94,7 +94,7 @@ Clearly, the four variables `attitude`, `deep`, `stra`, and `surf` represent sur
 To note, these data lack subject identifier (ID) variable. However, it may not be needed as we do not have repeated measures. 
 
 
-## 2. Graphical overwiew
+## 2.2 Graphical overwiew
 
 > ### Instructions
 > Show a graphical overview of the data and show summaries of the variables in the data. Describe and interpret the outputs, commenting on the distributions of the variables and the relationships between them. (0-3 points)
@@ -293,7 +293,7 @@ data %>% GGally::ggpairs(
 Here it is demonstrated that the strongest correlation is observed between `attitude` and `points`. In men, there is a strong inverse correlation between surface and deep learning, whereas such phenomenon doesn't exist in women. This implies that women may employ both strategies simultaneously, whereas in men these two strategies may be mutually exclusive. 
 
 
-## 3. Regression model
+## 2.3 Regression model
 
 > ### Instructions
 > Choose three variables as explanatory variables and fit a regression model where exam points is the target (dependent, outcome) variable. Show a summary of the fitted model and comment and interpret the results. Explain and interpret the statistical test related to the model parameters.
@@ -336,12 +336,15 @@ while (max(m1_s$coefficients[-1, "Pr(>|t|)"]) > 0.05) {
     Dropped = nonsigF,
     P = m1_s$coefficients[nonsigF, "Pr(>|t|)"] %>% signif(3)
   )
-  # Remove covariates from model one by one
+  # Remove covariate from model
   IVs <- IVs[!(IVs %in% nonsig)]
-  if (length(IVs > 0)) {
+  
+  # Quit if no predictors left
+  if (length(IVs) == 0) {print("All predictors NS"); break}
+  if (length(IVs) > 0) {
     formula <- paste0(response, " ~ ", paste(IVs, collapse = " + "))
     m1 <- lm(formula, data); m1_s <- summary(m1)
-  } else {print("All predictors NS"); break}
+  } 
 }
 dropped <- bind_rows(results); dropped %>% knitr::kable()
 ```
@@ -359,7 +362,7 @@ rms::fastbw(m_ols, rule = "p")
 Yup, we got the same result -- the only predictor left in the model is `attitude.` Thus, in the final model we'll predict exam `points` with only `attitude`.
 
 
-## 4. Interpretation
+## 2.4 Interpretation
 
 > ### Instructions
 > Using a summary of your fitted model, explain the relationship between the chosen explanatory variables and the target variable (interpret the model parameters). Explain and interpret the multiple R-squared of the model. (0-3 points)
@@ -376,7 +379,7 @@ In this model, coefficient for `attitude` is 3.5, which means that each one unit
 R-squared values (both multiple and adjusted = 0.19) show that only a small amount of variation (19%) in exam score can be explained by attitude. This is understandable as a lot of other things, and also our methods of measuring attitude could be imperfect.
 
 
-## 5. Graphical model validation
+## 2.5 Graphical model validation
 
 > ### Instructions
 > Produce the following diagnostic plots: Residuals vs Fitted values, Normal QQ-plot and Residuals vs Leverage. Explain the assumptions of the model and interpret the validity of those assumptions based on the diagnostic plots
