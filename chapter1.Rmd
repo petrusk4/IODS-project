@@ -29,7 +29,7 @@ p
 ```
 
 
-# 1: Start me up!
+# 1 Start me up!
 
 ### `R` for Health Data Science book
 

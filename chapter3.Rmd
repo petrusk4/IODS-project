@@ -1,4 +1,4 @@
-# 3: Regression and model validation
+# 3 Logistic regression
 
 > ### Instructions
 > 
