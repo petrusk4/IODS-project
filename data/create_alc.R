@@ -71,5 +71,5 @@ data_premade <- read.table(
 diffdf::diffdf(alc, data_premade)
 
 # Write to file
-write_csv(alc, paste0("data/alc/alc_", Sys.Date(), ".csv"))
+write_csv(alc, paste0("data/alc/ready/alc_", Sys.Date(), ".csv"))
 

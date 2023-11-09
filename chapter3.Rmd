@@ -1,8 +1,4 @@
 # 3 Logistic regression
-
-> ### Instructions
-> 
-
 ## Setup
 
 First let's load the needed packages and some custom functions.
@@ -39,4 +35,26 @@ labs <- tribble(
   "surf", "Surface learning"
 )
 ```
+
+
+## Get data
+
+```{r}
+# Read data
+datasets <- list.files("data/alc/ready", full.names = T)
+newest <- datasets %>% sub('.*_', '', .) %>% as.Date() %>% max()
+data <- datasets[grepl(newest, datasets)] %>%
+  readr::read_csv(show_col_types = F)
+
+# Glance at the data
+glimpse(data)
+
+# Check data missingness
+finalfit::missing_glimpse(data) %>% select(-label)# %>% knitr::kable()
+
+```
+
+## Description
+
+The `Student Performance` data used for the assignment is from the open [UC Irvine Machine Learning Repository](https://archive.ics.uci.edu/dataset/320/student+performance). More metadata can be found from `data/alc/docs/student.txt`. 
 

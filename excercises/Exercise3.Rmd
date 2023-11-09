@@ -456,7 +456,10 @@ g1 <- ggplot(alc, aes(x = high_use, y = G3))
 g1 + geom_boxplot() + ylab("grade")
 
 # initialize a plot of high_use and absences
+g1 <- ggplot(alc, aes(x = high_use, y = absences))
 
+# define the plot as a boxplot and draw it
+g1 + geom_boxplot()
 
 # define the plot as a box plot and draw it
 
@@ -499,11 +502,13 @@ Hint:
 m <- glm(high_use ~ failures + absences, data = alc, family = "binomial")
 
 # print out a summary of the model
-
+summary(m)
 
 # print out the coefficients of the model
+coef(m)
+exp(coef(m))
 
-
+gtsummary::tbl_regression(m, exp = T)
 ```
 
 
@@ -550,11 +555,12 @@ m <- glm(high_use ~ failures + absences + sex, data = alc, family = "binomial")
 OR <- coef(m) %>% exp
 
 # compute confidence intervals (CI)
-
+CI <- exp(confint(m))
 
 # print out the odds ratios with their confidence intervals
 cbind(OR, CI)
 
+m %>% gtsummary::tbl_regression(exp = T)
 
 ```
 
@@ -606,13 +612,13 @@ library(dplyr)
 alc <- mutate(alc, probability = probabilities)
 
 # use the probabilities to make a prediction of high_use
-alc <- mutate(alc, prediction = "change me!")
+alc <- mutate(alc, prediction = probabilities > .5)
 
 # see the last ten original classes, predicted probabilities, and class predictions
 select(alc, failures, absences, sex, high_use, probability, prediction) %>% tail(10)
 
 # tabulate the target variable versus the predictions
-table(high_use = alc$high_use, prediction = "change me!")
+table(high_use = alc$high_use, prediction = alc$prediction)
 
 
 ```
@@ -656,10 +662,11 @@ Hint:
 library(dplyr); library(ggplot2)
 
 # initialize a plot of 'high_use' versus 'probability' in 'alc'
-g <- ggplot(alc, aes(x = "change me!", y = "change me!"))
+g <- ggplot(alc, aes(x = probabilities, y = high_use))
 
 # define the geom as points and draw the plot
-
+g <- g + geom_point()
+g
 
 # tabulate the target variable versus the predictions
 table(high_use = alc$high_use, prediction = alc$prediction)
@@ -706,13 +713,16 @@ Hints:
 # the logistic regression model m and dataset alc with predictions are available
 
 # define a loss function (mean prediction error)
-loss_func <- function(class, prob) {
+loss_func <- function (class, prob) {
   n_wrong <- abs(class - prob) > 0.5
   mean(n_wrong)
 }
 
 # call loss_func to compute the average number of wrong predictions in the (training) data
 loss_func(class = alc$high_use, prob = 0)
+loss_func(class = alc$high_use, prob = 1)
+
+loss_func(class = alc$high_use, prob = alc$probability)
 
 
 ```
@@ -761,8 +771,12 @@ loss_func <- function(class, prob) {
 
 
 # K-fold cross-validation
-library(boot)
-cv <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = nrow(alc))
+cv <- boot::cv.glm(
+  data = alc,
+  cost = loss_func,
+  glmfit = m,
+  K = 10
+)
 
 # average number of wrong predictions in the cross validation
 cv$delta[1]
