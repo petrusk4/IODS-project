@@ -37,7 +37,7 @@ labs <- tribble(
 ```
 
 
-## Get data
+## 3.2 Get data
 
 ```{r}
 # Read data
@@ -56,5 +56,83 @@ finalfit::missing_glimpse(data) %>% select(-label)# %>% knitr::kable()
 
 ## Description
 
-The `Student Performance` data used for the assignment is from the open [UC Irvine Machine Learning Repository](https://archive.ics.uci.edu/dataset/320/student+performance). More metadata can be found from `data/alc/docs/student.txt`. 
+The `Student Performance` data used for the assignment is from the open [UC Irvine Machine Learning Repository](https://archive.ics.uci.edu/dataset/320/student+performance). Briefly, the data describe student performance in secondary education of two Portuguese schools. Variables include student grades, demographic, social and school related features, based on questionnaire results. The data were processed by computing grades as average performance in two distinct subjects: Mathematics (mat) and Portuguese language (por). More metadata of the two original datasets can be found from `data/alc/docs/student.txt`. 
+
+## 3.3 Hypotheses
+
+> ### Instructions
+> -- choose 4 interesting variables in the data and for each of them, present your personal hypothesis about their relationships with alcohol consumption.
+
+I'll choose the following variables and list each corresponding hypothesis after the variable:
+
+1. `traveltime` **home to school travel time** *(numeric: 1 - <15 min., 2 - 15 to 30 min., 3 - 30 min. to 1 hour, or 4 - >1 hour)*
+
+$H_1:$ Location, location, location... Students that live in an urban setting (where the school is) might have easier access to bar and subsequent alcohol use.
+
+2. `studytime` **weekly study time** *(numeric: 1 - <2 hours, 2 - 2 to 5 hours, 3 - 5 to 10 hours, or 4 - >10 hours)*
+
+$H_1:$ Students that use a lot of alcohol may prioritize drinking in favor of studying. Students that put a lot of effort into studies may be inclined to use less alcohol.
+
+3. `failures` - **number of past class failures** *(numeric: n if 1<=n<3, else 4)*
+
+$H_1:$ It is plausible that alcohol use impairs cognitive abilities. Poor success in studies, indicated by failing tests and courses could be a sign of alcohol abuse.
+
+4. `romantic`: **with a romantic relationship** *(binary: yes or no)*
+
+$H_1:$ It is well-known that couples have healthier diet than singles - perhaps this also applies to the fourth macronutrient: alcohol.
+
+## Distributions
+
+```{r fig.width=6, fig.height=6}
+# Variables and their value labs
+vars_hypo <- tribble(
+  ~var, ~labs,
+  "traveltime", c("<15 min.", "15 to 30 min.", "30 min. to 1 hour", ">1 hour"),
+  "studytime", c("<2 hours", "2 to 5 hours", "5 to 10 hours", ">10 hours"),
+  "failures", c("n=0", "n=1", "n=2", "n=3"),
+  "romantic", c("Taken", "Single")
+)
+
+# Plot in a loop
+plist <- lapply(1:nrow(vars_hypo), \ (i) {
+  p <- data %>%
+    mutate(
+      !!vars_hypo$var[[i]] := factor(
+        .data[[vars_hypo$var[[i]]]],
+        labels = vars_hypo$labs[[i]]
+      )
+    ) %>%
+    ggplot(aes(x = .data[[vars_hypo$var[[i]]]]))
+  p <- p + geom_bar(aes(fill = .data[[vars_hypo$var[[i]]]]))
+  p <- p + theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    legend.position = "none"
+  )
+  p <- p + harrypotter::scale_fill_hp_d("LunaLovegood")
+  p
+})
+
+ggpubr::ggarrange(
+  plotlist = plist,
+  align = "hv"
+)
+
+
+
+```
+
+Data are ordinal but not interval, and heavily skewed also. Let's use Spearman correlation coefficient.
+
+```{r}
+# data %>%
+#   select(
+#     high_use,
+#     traveltime,
+#     studytime,
+#     failures,
+#     romantic
+#   ) %>%
+#   gtsummary::tbl_summary(by = "high_use") %>%
+#   gtsummary::add_p()
+```
 
