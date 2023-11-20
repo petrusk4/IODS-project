@@ -20,6 +20,7 @@ Go to each exercise in turn and do as follows:
 2. Run the (possible) pre-exercise-code chunk.
 3. Follow the instructions to fix the R code!
 
+
 ## 3.0 INSTALL THE REQUIRED PACKAGES FIRST!
 
 One or more extra packages (in addition to `tidyverse`) will be needed below.

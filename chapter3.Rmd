@@ -9,9 +9,9 @@ pacman::p_load(tidyverse, GGally, patchwork, ggfortify)
 
 ## Defining some custom functions
 # Colors
-colorpair <- c("orangered", "dodgerblue")
-color_gender <- \ () {scale_color_manual(values = colorpair)}
-fill_gender <- \ () {scale_fill_manual(values = colorpair)}
+# colorpair <- c("orangered", "dodgerblue")
+# color_gender <- \ () {scale_color_manual(values = colorpair)}
+# fill_gender <- \ () {scale_fill_manual(values = colorpair)}
 
 # Dark mode theme
 theme_darkmode <- \ (backg = "#141415") {
@@ -23,17 +23,6 @@ theme_darkmode <- \ (backg = "#141415") {
       panel.grid = element_line(color = "gray20")
     )
 }
-
-# Beautiful labels
-labs <- tribble(
-  ~var, ~lab,
-  "age", "Age",
-  "attitude", "Attitude",
-  "points", "Exam points",
-  "deep", "Deep learning",
-  "stra", "Strategic learning",
-  "surf", "Surface learning"
-)
 ```
 
 
@@ -47,16 +36,15 @@ data <- datasets[grepl(newest, datasets)] %>%
   readr::read_csv(show_col_types = F)
 
 # Glance at the data
-glimpse(data)
-
-# Check data missingness
-finalfit::missing_glimpse(data) %>% select(-label)# %>% knitr::kable()
-
+# glimpse(data)
+finalfit::finalfit_glimpse(data)$Continuous %>% select(-label) %>% knitr::kable()
 ```
+
 
 ## Description
 
 The `Student Performance` data used for the assignment is from the open [UC Irvine Machine Learning Repository](https://archive.ics.uci.edu/dataset/320/student+performance). Briefly, the data describe student performance in secondary education of two Portuguese schools. Variables include student grades, demographic, social and school related features, based on questionnaire results. The data were processed by computing grades as average performance in two distinct subjects: Mathematics (mat) and Portuguese language (por). More metadata of the two original datasets can be found from `data/alc/docs/student.txt`. 
+
 
 ## 3.3 Hypotheses
 
@@ -65,23 +53,43 @@ The `Student Performance` data used for the assignment is from the open [UC Irvi
 
 I'll choose the following variables and list each corresponding hypothesis after the variable:
 
-1. `traveltime` **home to school travel time** *(numeric: 1 - <15 min., 2 - 15 to 30 min., 3 - 30 min. to 1 hour, or 4 - >1 hour)*
+1. `traveltime` **home to school travel time** 
+
+  - numeric:
+  - 1 - <15 min.
+  - 2 - 15 to 30 min.
+  - 3 - 30 min. to 1 hour
+  - 4 - >1 hour
 
 $H_1:$ Location, location, location... Students that live in an urban setting (where the school is) might have easier access to bar and subsequent alcohol use.
 
-2. `studytime` **weekly study time** *(numeric: 1 - <2 hours, 2 - 2 to 5 hours, 3 - 5 to 10 hours, or 4 - >10 hours)*
+2. `studytime` **weekly study time** 
+
+  - *numeric:*
+  - 1 - <2 hours
+  - 2 - 2 to 5 hours
+  - 3 - 5 to 10 hours
+  - 4 - >10 hours
 
 $H_1:$ Students that use a lot of alcohol may prioritize drinking in favor of studying. Students that put a lot of effort into studies may be inclined to use less alcohol.
 
-3. `failures` - **number of past class failures** *(numeric: n if 1<=n<3, else 4)*
+3. `failures` - **number of past class failures** 
+
+  - *numeric:*
+  - n if 1<=n<3
+  - else 4
 
 $H_1:$ It is plausible that alcohol use impairs cognitive abilities. Poor success in studies, indicated by failing tests and courses could be a sign of alcohol abuse.
 
-4. `romantic`: **with a romantic relationship** *(binary: yes or no)*
+4. `romantic`: **with a romantic relationship** 
+
+  - *binary:*
+  - yes or no
 
 $H_1:$ It is well-known that couples have healthier diet than singles - perhaps this also applies to the fourth macronutrient: alcohol.
 
-## Distributions
+
+## 3.4 Distributions
 
 ```{r fig.width=6, fig.height=6}
 # Variables and their value labs
@@ -121,18 +129,91 @@ ggpubr::ggarrange(
 
 ```
 
-Data are ordinal but not interval, and heavily skewed also. Let's use Spearman correlation coefficient.
+Data are ordinal but not interval, and also heavily skewed. Let's use Spearman correlation coefficient, which is a non-parametric test that works for (at least) ordinal data.
+
+```{r message=FALSE, warning=FALSE, fig.width=8, fig.height=7}
+# Plot
+data[, c("alc_use", "high_use", vars_hypo$var)] %>%
+  GGally::ggpairs(
+    mapping = aes(color = romantic, fill = romantic), #, alpha = .3
+    upper = list(continuous = wrap("cor", method = "spearman")),
+  ) +
+  harrypotter::scale_color_hp_d("LunaLovegood") +
+  harrypotter::scale_fill_hp_d("LunaLovegood") + 
+  ggtitle("Links with alcohol consumption by relationship status")
+```
+
+**Interpretation:** We can see that alcohol use is related to lower `studytime` ($r = -0.276$) and higher rate of `failures` ($r = 0.204$), but spearman correlation analysis reveals no significant link with `traveltime` ($r = 0.084$). The inverse relationship between alcohol use and `studytime` may depend on `romantic` status, as a strong, significant correlation coefficient is seen only in single students ($r = -0.321$).
+
+
+## 3.5 Logistic regression
+
+```{r message=FALSE}
+# Variables
+response <- "high_use"
+predictors <- vars_hypo$var
+form <- as.formula(paste0(response, " ~ ", paste(predictors, collapse = " + ")))
+
+# Fit the model
+m1 <- glm(formula = form, data = data)
+m1_s <- summary(m1)
+m1_s
+
+# ORs and their CIs
+CIs <- data.frame(
+  OR = coef(m1) %>% exp() %>% round(3), # Odds ratios
+  Lower = confint(m1)[, "2.5 %"] %>% exp() %>% round(3), # 95% CIs
+  Upper = confint(m1)[, "97.5 %"] %>% exp() %>% round(3), # 95% CIs
+  P = m1_s$coefficients[, "Pr(>|t|)"] %>% gtsummary::style_pvalue(prepend_p = T)
+) %>% rownames_to_column(var = "Predictor")
+
+# Plot estimates
+p <- CIs %>%
+  filter(Predictor != "(Intercept)") %>%
+  ggplot(aes(x = OR, y = Predictor))
+p <- p + geom_vline(xintercept = 1)
+p <- p + geom_pointrange(aes(xmin = Lower, xmax = Upper), size = 1)
+p <- p + geom_text(aes(
+  label = paste0(P, "\n\n")
+))
+p <- p + theme(
+  panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank()
+)
+p <- p + scale_x_continuous(trans = "log2", breaks = c(.8, .9, 1, 1.1, 1.2))
+p <- p + ggtitle("Forest plot") + xlab("OR for high alcohol use (95% CI)") + ylab("")
+p
+
+# Numeric output
+CIs %>% knitr::kable()
+```
+
+**Interpretation:** Odds ratios measure the association between exposure(s) and outcome (high alcohol use). An OR greater than 1 indicates that exposed individuals are more likely high alcohol users. OR smaller than 1 leads us to believe that the exposure is more common in *low* alcohol users. If the 95% confidence interval overlaps 1 (null), we can not reject null hypothesis $H_0$ with confidence level $a = 0.05$. 
+
+As we see from the forest plot, longer `traveltime` is borderline significantly associated with high alcohol use. As hypothesized above, `studytime` shows **inverse** association with high alcohol use and failures a **positive** association.
+
+
+## 3.6 Predictive power
 
 ```{r}
-# data %>%
-#   select(
-#     high_use,
-#     traveltime,
-#     studytime,
-#     failures,
-#     romantic
-#   ) %>%
-#   gtsummary::tbl_summary(by = "high_use") %>%
-#   gtsummary::add_p()
+# Prediction and observing the data
+prob <- predict(m1, type = "response")
+data <- mutate(data, probability = prob)
+data <- mutate(data, prediction = probability > 0.5)
+
+# 2x2 cross tabulation
+data %>% 
+  {table(IRL = .$high_use, prediction = .$prediction)}
+
+
+
 ```
+
+
+## 3.7 Bonus: 10-fold cross-validation
+
+
+
+
+## 3.8 Super-Bonus: 
+
 
