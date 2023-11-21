@@ -53,38 +53,35 @@ The `Student Performance` data used for the assignment is from the open [UC Irvi
 
 I'll choose the following variables and list each corresponding hypothesis after the variable:
 
-1. `traveltime` **home to school travel time** 
+1. `traveltime` **home to school travel time**, *numeric:*
 
-  - numeric:
-  - 1 - <15 min.
-  - 2 - 15 to 30 min.
-  - 3 - 30 min. to 1 hour
-  - 4 - >1 hour
+    - 1 - <15 min.
+    - 2 - 15 to 30 min.
+    - 3 - 30 min. to 1 hour
+    - 4 - >1 hour
 
 $H_1:$ Location, location, location... Students that live in an urban setting (where the school is) might have easier access to bar and subsequent alcohol use.
 
-2. `studytime` **weekly study time** 
+2. `studytime` **weekly study time**, *numeric:*
 
-  - *numeric:*
-  - 1 - <2 hours
-  - 2 - 2 to 5 hours
-  - 3 - 5 to 10 hours
-  - 4 - >10 hours
+    - 1 - <2 hours
+    - 2 - 2 to 5 hours
+    - 3 - 5 to 10 hours
+    - 4 - >10 hours
 
 $H_1:$ Students that use a lot of alcohol may prioritize drinking in favor of studying. Students that put a lot of effort into studies may be inclined to use less alcohol.
 
-3. `failures` - **number of past class failures** 
+3. `failures` - **number of past class failures**, *numeric:*
 
-  - *numeric:*
-  - n if 1<=n<3
-  - else 4
+    - n if 1<=n<3
+    - else 4
 
 $H_1:$ It is plausible that alcohol use impairs cognitive abilities. Poor success in studies, indicated by failing tests and courses could be a sign of alcohol abuse.
 
-4. `romantic`: **with a romantic relationship** 
+4. `romantic`: **with a romantic relationship**, *binary:*
 
-  - *binary:*
-  - yes or no
+    - yes
+    - no
 
 $H_1:$ It is well-known that couples have healthier diet than singles - perhaps this also applies to the fourth macronutrient: alcohol.
 
@@ -189,12 +186,21 @@ CIs %>% knitr::kable()
 
 **Interpretation:** Odds ratios measure the association between exposure(s) and outcome (high alcohol use). An OR greater than 1 indicates that exposed individuals are more likely high alcohol users. OR smaller than 1 leads us to believe that the exposure is more common in *low* alcohol users. If the 95% confidence interval overlaps 1 (null), we can not reject null hypothesis $H_0$ with confidence level $a = 0.05$. 
 
-As we see from the forest plot, longer `traveltime` is borderline significantly associated with high alcohol use. As hypothesized above, `studytime` shows **inverse** association with high alcohol use and failures a **positive** association.
+As we see from the forest plot and counter to our hypothesis, longer `traveltime` is borderline significantly associated with high alcohol use. As hypothesized above, `studytime` shows **inverse** association with high alcohol use and failures a **positive** association.
 
 
 ## 3.6 Predictive power
 
-```{r}
+```{r fig.width=7, fig.height=5}
+# Significant variables
+sig_vars <- rownames(m1_s$coefficients)[which(m1_s$coefficients[, "Pr(>|t|)"] < .05)][-1]
+
+# Fit the model
+form <- as.formula(paste0(response, " ~ ", paste(sig_vars, collapse = " + ")))
+m1 <- glm(formula = form, data = data)
+m1_s <- summary(m1)
+m1_s
+
 # Prediction and observing the data
 prob <- predict(m1, type = "response")
 data <- mutate(data, probability = prob)
@@ -204,16 +210,191 @@ data <- mutate(data, prediction = probability > 0.5)
 data %>% 
   {table(IRL = .$high_use, prediction = .$prediction)}
 
+# Table the target variable versus the predictions
+data %>%
+  {table(IRL_use = .$high_use, predicted_use = .$prediction)} %>%
+  prop.table() %>% addmargins() %>% round(2)
+
+# Average number of wrong predictions in the (training) data
+loss_func <- function (class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+# Call loss_func
+loss_func(class = data$high_use, prob = 0)
+loss_func(class = data$high_use, prob = 1)
+
+data %>% {loss_func(class = .$high_use, prob = .$probability)}
+
+## Compute AUC metrics
+# Our model
+perf_m1 <- ROCR::prediction(prob, data$high_use) %>%
+  ROCR::performance(measure = "tpr", x.measure = "fpr")
+
+# Simple guessing strategy
+guess_fun <- \ (i) {
+  truth <- runif(1:length(i), min = 0, max = 1) %>% return()
+}
+guessings <- guess_fun(m1$residuals)
+perf_guess <- ROCR::prediction(guessings, data$high_use) %>%
+  ROCR::performance(measure = "tpr", x.measure = "fpr")
 
 
+# Plot ROC curve
+p <- ggplot()
+p <- p + geom_abline(slope = 1, intercept = 0, color = "gray80")
+p <- p + geom_line(
+  linetype = "dashed", size = 1,
+  aes(x = perf_m1@x.values[[1]], y = perf_m1@y.values[[1]], color = "Model")
+)
+p <- p + geom_line(
+  linetype = "dashed", size = 1,
+  aes(x = perf_guess@x.values[[1]], y = perf_guess@y.values[[1]], color = "Guess")
+)
+p <- p + xlab(perf_m1@x.name) + ylab(perf_m1@y.name)
+p <- p + scale_color_manual(name = "Model", values = c("orangered", "orange"))
+p
 ```
+
+Our model resulted in 25% false negatives and 2% false positives. There were 5% true positives and 68% true negatives, indicating that our model has good specificity. Although our model is not perfect, it performs much better than a **simple guessing strategy** (flipping a coin), as demonstrated with the ROC curves. 
 
 
 ## 3.7 Bonus: 10-fold cross-validation
 
+```{r}
+# Perform 10-fold CV
+# Define a loss function (average prediction error)
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+# K-fold cross-validation
+cv <- boot::cv.glm(
+  data = data,
+  cost = loss_func,
+  glmfit = m1,
+  K = 10
+)
+
+# Average number of wrong predictions in the cross validation
+cv$delta[1]
+```
+
+The average percentage of wrong predictions in the cross validation was ~30%, which is pretty high and higher than in the `Exercise3.Rmd` set (26%). We might not have the best variables or enough of them in the model.
+
+Let's try making a model that has smaller prediction error.
+
+```{r}
+# Lets try this one variable at a time
+vars <- names(data)[!(names(data) %in% c(
+  "alc_use", "high_use", "Dalc", "Walc", "probability", "prediction"
+))]
+
+# Most important vars
+form <- as.formula(paste0("high_use ~ ", paste(vars, collapse = " + ")))
+m <- glm(formula = form, family = "binomial", data = data)
+# m %>% summary()
+
+# Variable Importance
+importance <- caret::varImp(m, scale = FALSE) %>%
+  arrange(Overall) %>%
+  rownames_to_column("Variable")
+importance %>%
+  ggplot(aes(x = reorder(Variable, Overall), y = Overall)) + geom_col() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+# Loop
+results <- list()
+for (var in vars) {
+  form <- as.formula(paste0("high_use ~ ", var))
+  m_s <- glm(formula = form, family = "binomial", data = data) %>% summary()
+  results[[var]] <- data.frame(
+    var = var,
+    P = m_s$coefficients[2, "Pr(>|z|)"]
+  )
+}
+results <- bind_rows(results) %>% arrange(P) 
+results %>% knitr::kable() 
+
+# Pick most promising ones
+form <- as.formula(paste0("high_use ~ ", paste(results$var[1:5], collapse = " + ")))
+m1 <- glm(formula = form, family = "binomial", data = data)
+m_s <- summary(m1)
+m_s
+
+# Backward variable selection
+step_m <- MASS::stepAIC(m1, direction = "both", trace = F)
+step_m %>% summary()
+
+# Perform 10-fold CV
+cv <- boot::cv.glm(
+  data = data,
+  cost = loss_func,
+  glmfit = step_m,
+  K = 10
+)
+
+# Average number of wrong predictions in the cross validation
+cv$delta[1]
+```
+
+Now we got a smaller prediction error using 10-fold cross-validation compared to the Exercise Set (0.22 *vs.* 0.26)!
 
 
+## 3.8 Super-Bonus: different sets of predictors
 
-## 3.8 Super-Bonus: 
+Finding out what is the optimal number of predictors to achieve as little prediction error as possible!
+
+```{r}
+# In a loop based on importance
+importance <- caret::varImp(m, scale = FALSE) %>%
+  arrange(Overall) %>%
+  rownames_to_column("Variable")
+
+# Remove factor levels from tailing the column names
+vars <- c()
+for (var in importance$Variable) {
+  while (!(var %in% names(data))) {
+    var <- stringr::str_sub(var, end = -2)
+  }
+  vars <- c(vars, var)
+}
+
+# The actual loop
+results <- list()
+while (length(vars) >= 2) {
+  vars <- tail(vars, -1)
+  cat(paste0(length(vars)), "  ")
+  
+  # Formula
+  form <- as.formula(paste0("high_use ~ ", paste(vars, collapse = " + ")))
+  
+  # Model
+  loop_m <- glm(formula = form, family = "binomial", data = data)
+  
+  # Perform 10-fold CV
+  cv <- boot::cv.glm(
+    data = data,
+    cost = loss_func,
+    glmfit = loop_m,
+    K = 10
+  )
+  
+  # Pick relevant stuff into a row
+  results[[length(vars)]] <- data.frame(
+    N_variables = length(vars),
+    Avg_wrong_preds = cv$delta[1] # Avg N of wrong predictions
+  )
+}
+results <- bind_rows(results)# %>% arrange(P) 
+results %>% ggplot(aes(x = N_variables, y = Avg_wrong_preds)) +
+  geom_point() + geom_smooth()
+
+```
+
+
+We have now demonstrated that lowest prediction error is achieved by including ~10 of the important variables!!
 
 
