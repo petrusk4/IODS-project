@@ -28,16 +28,8 @@ output:
 # Packages
 pacman::p_load(tidyverse)
 
-# Theme for all figs
-backg <- "#141415"
-ggdark::dark_theme_gray() %+replace% 
-  ggplot2::theme(
-    plot.background = element_rect(color = backg, fill = backg),
-    legend.box.background = element_rect(fill = backg, color = backg),
-    legend.background = element_rect(fill = backg, color = backg),
-    panel.grid = element_line(color = "gray20")
-  ) %>%
-  ggplot2::theme_set()
+# Custom functions
+source("src/fig_setup.R")
 ```
 
 ```{r child = "chapter1.Rmd"}
@@ -47,4 +39,7 @@ ggdark::dark_theme_gray() %+replace%
 ```
 
 ```{r child = "chapter3.Rmd"}
+```
+
+```{r child = "chapter4.Rmd"}
 ```
