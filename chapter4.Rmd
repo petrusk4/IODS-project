@@ -9,6 +9,8 @@ pacman::p_load(tidyverse)
 
 # Custom functions
 source("src/fig_setup.R")
+
+start.time <- Sys.time()
 ```
 
 
@@ -165,7 +167,7 @@ print(p, newpage = FALSE)
 ```
 
 
-## 4.6
+## 4.6 Class prediction
 
 > ### Instructions
 > Save the crime categories from the test set and then remove the categorical crime variable from the test dataset. Then predict the classes with the LDA model on the test data. Cross tabulate the results with the crime categories from the test set. Comment on the results. (0-3 points)
@@ -179,12 +181,23 @@ lda.pred <- predict(lda.fit, newdata = test)
 
 # cross tabulate the results
 ctab <- table(correct = correct_classes, predicted = lda.pred$class)
-ctab
-ctab %>% prop.table() %>% round(2) #%>% {. * 100}
+ctab; ctab %>% prop.table() %>% round(2) #%>% {. * 100}
 ```
 
+The confusion matrix above tells us that most classes were predicted correctly. Predictions for Q1 suburbs were spread broadly across three different quartiles, whereas most/all Q4 suburbs were correctly classified. There were some false positives as well as negatives.
 
 
+```{r}
+# Overall model accuracy
+accuracy <- mean(lda.pred$class == correct_classes) %>% scales::percent()
+accuracy
+
+# Misclassification rate
+misclass <- mean(lda.pred$class != correct_classes) %>% scales::percent()
+misclass
+```
+
+In general, model accuracy is `r accuracy` and misclassification rate `r misclass`. Since the training and testing sets are randomly assigned, the results change every time the code is run. Crossvalidation could provide better credence for evaluating the model performance.
 
 
 ## 4.7
@@ -215,4 +228,12 @@ matrix_product <- as.matrix(model_predictors) %*% lda.fit$scaling
 matrix_product <- as.data.frame(matrix_product)
 ```
 
+
+```{r}
+end.time <- Sys.time()
+elapsed.time <- round((end.time - start.time), 3)
+elapsed.time
+
+# bench::system_time(rmarkdown::render("test.Rmd", quiet = TRUE))
+```
 
