@@ -439,16 +439,16 @@ Hints:
 # Boston dataset is available
 
 # euclidean distance matrix
-dist_eu <- "change me!"
+dist_eu <- dist(Boston)
 
 # look at the summary of the distances
-
+summary(dist_eu)
 
 # manhattan distance matrix
-dist_man <- "change me!"
+dist_man <- dist(Boston, method = "manhattan")
 
 # look at the summary of the distances
-
+summary(dist_man)
 
 ```
 
@@ -486,11 +486,11 @@ Hints:
 # Boston dataset is available
 
 # k-means clustering
-km <- kmeans(Boston, centers = "change me!")
+km <- kmeans(Boston, centers = 3)
+table(km$cluster)
 
 # plot the Boston dataset with clusters
-pairs(Boston, col = "change me!")
-
+pairs(Boston[, c("rm", "age", "dis", "crim")], col = km$cluster)
 
 
 ```
@@ -532,7 +532,7 @@ Hints:
 set.seed(123)
 
 # determine the number of clusters
-k_max <- "change me!"
+k_max <- 10
 
 # calculate the total within sum of squares
 twcss <- sapply(1:k_max, function(k){kmeans(Boston, k)$tot.withinss})
@@ -541,7 +541,7 @@ twcss <- sapply(1:k_max, function(k){kmeans(Boston, k)$tot.withinss})
 qplot(x = 1:k_max, y = twcss, geom = 'line')
 
 # k-means clustering
-km <- kmeans(Boston, centers = "change me!")
+km <- kmeans(Boston, centers = 2)
 
 # plot the Boston dataset with clusters
 pairs(Boston, col = km$cluster)

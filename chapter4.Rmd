@@ -10,6 +10,7 @@ pacman::p_load(tidyverse)
 # Custom functions
 source("src/fig_setup.R")
 
+# Run time
 start.time <- Sys.time()
 ```
 
@@ -200,10 +201,94 @@ misclass
 In general, model accuracy is `r accuracy` and misclassification rate `r misclass`. Since the training and testing sets are randomly assigned, the results change every time the code is run. Crossvalidation could provide better credence for evaluating the model performance.
 
 
-## 4.7
+## 4.7 Clustering
 
 > ### Instructions
 > Reload the Boston dataset and standardize the dataset (we did not do this in the Exercise Set, but you should scale the variables to get comparable distances). Calculate the distances between the observations. Run k-means algorithm on the dataset. Investigate what is the optimal number of clusters and run the algorithm again. Visualize the clusters (for example with the pairs() or ggpairs() functions, where the clusters are separated with colors) and interpret the results. (0-4 points)
+
+Let's scale the dataset and calculate Eucledian distances between the observations.
+
+```{r}
+# Reload the dataset
+boston <- MASS::Boston
+
+# Standardize
+boston_z <- boston %>% scale() %>% data.frame()
+
+# Calculate distances between observations
+dist_eu <- dist(boston_z)
+summary(dist_eu)
+```
+
+
+
+```{r fig.width=6, fig.height=3.5}
+# Determine max N of clusters
+k_max <- 10
+
+# Calculate total within-cluster sum of squares (TWSS) for different cluster numbers
+# Uncomment to test
+# TWSS <- sapply(1:k_max, \ (k) kmeans(boston_z, centers = k)$tot.withinss)
+
+# Iterate in a loop to acquire more precise estimates
+results <- list()
+for (i in 1:50) {
+  TWSS <- sapply(1:k_max, \ (k) kmeans(boston_z, centers = k)$tot.withinss)
+  results[[i]] <- data.frame(iteration = i, N = 1:length(TWSS), TWSS) 
+} 
+results <- results %>% bind_rows()
+
+
+# Visualize 
+results %>%
+  ggplot(aes(x = N, y = TWSS, color = iteration)) +
+  geom_point(size = .2) +
+  geom_line(alpha = .2, aes(group = iteration), linewidth = .2) +
+  # stat_summary(fun = mean, geom = "line") +
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = .2) +
+  scale_x_continuous(breaks = 1:k_max) +
+  xlab("Number of clusters") +
+  ylab("Total of Within Cluster Sum of Squares") +
+  ggtitle("Finding the optimal number of clusters") +
+  scale_color_gradientn(colours = c("orange", "orangered", "purple"))
+```
+
+Based on 50 simulations, the most dramatic drop in TWSS is achieved when increasing the number of clusters from `1` to `2`. Only diminshing returns are achieved after this drop. Thus, we we will continue with `2` clusters. 
+
+
+```{r fig.width=8, fig.height=6}
+# Calculate k-means with optimal N of clusters
+km <- kmeans(boston_z, centers = 2)
+
+# Add clusters to data frame
+boston_z <- boston_z %>%
+  mutate(
+    cluster = factor(km$cluster)
+  )
+
+# Plot
+boston_z %>%
+  reshape2::melt(id.vars = "cluster") %>%
+  ggplot(aes(x = cluster, y = value, color = cluster)) +
+  ggforce::geom_sina(size = .5, alpha = .7) +
+  stat_summary(
+    fun.data = mean_cl_normal,
+    color = "white", geom = "errorbar", width = .2
+  ) +
+  ggpubr::stat_compare_means(
+    vjust = 1, method = "wilcox.test",
+    aes(x = 1.5, label = paste0("P=", after_stat(p.adj), 2))
+  ) +
+  theme(
+    panel.grid.major.x = element_blank()
+  ) +
+  scale_color_manual(values = c("orange", "orangered2")) +
+  xlab("Cluster") + ylab("Standard deviations") +
+  facet_wrap(. ~ variable, ncol = 7)
+
+```
+
+The most clear separation between the clusters can be seen in variables `nox`, `tax`, `crim` and `indus`. P-values for between-cluster differences are crazy exponentially small, which highlights the power of k-mean clustering. A full scatter plot was also made with `GGally::ggpairs()`, but it was hard to read and narrowing it could omit important information.
 
 
 ## Bonus
@@ -211,29 +296,134 @@ In general, model accuracy is `r accuracy` and misclassification rate `r misclas
 > ### Instructions
 > Perform k-means on the original Boston data with some reasonable number of clusters (> 2). Remember to standardize the dataset. Then perform LDA using the clusters as target classes. Include all the variables in the Boston data in the LDA model. Visualize the results with a biplot (include arrows representing the relationships of the original variables to the LDA solution). Interpret the results. Which variables are the most influential linear separators for the clusters? (0-2 points to compensate any loss of points from the above exercises)
 
+Let's pick 4 clusters since it is reasonable and adding clusters only marginally decreases TWSS.
 
+```{r}
+# Reload and standardize
+boston_z <- MASS::Boston %>% scale() %>% data.frame()
+
+set.seed(14)
+# Calculate k-means with optimal N of clusters
+boston_z <- boston_z %>%
+  mutate(cluster = factor(kmeans(boston_z, centers = 4)$cluster))
+
+# Fit the LDA analysis
+lda.fit <- MASS::lda(cluster ~ ., data = boston_z)
+lda.fit
+
+# Draw the LDA biplot
+p <- ggord::ggord(
+  lda.fit,
+  boston_z$cluster,
+  size = 1,
+  labcol = "white",
+  veccol = "white",
+  repel = T
+)
+p <- p + ggsci::scale_color_lancet()
+p <- p + ggsci::scale_fill_lancet()
+p <- p + theme_darkmode()
+
+# Print without white edges
+grid::grid.newpage()
+grid::grid.draw(grid::rectGrob(gp = grid::gpar(fill = backg)))
+print(p, newpage = FALSE)
+
+
+
+```
+
+It appears that most of the times, `rad`, `indus` and `zn` are the most influential linear separators for the clusters. 
 
 ## Super-Bonus
 
 > ### Instructions
 > Run the code below for the (scaled) train data that you used to fit the LDA. The code creates a matrix product, which is a projection of the data points.
 
-```{}
-model_predictors <- dplyr::select(train, -crime)
-# check the dimensions
+```{r}
+# Use old train set that was analysed above
+model_predictors <- train %>% select(-crime_quant)
+
+# LDA model
+lda.fit <- MASS::lda(crime_quant ~ ., data = train)
+
+# Check the dimensions
 dim(model_predictors)
 dim(lda.fit$scaling)
-# matrix multiplication
-matrix_product <- as.matrix(model_predictors) %*% lda.fit$scaling
-matrix_product <- as.data.frame(matrix_product)
+
+# Matrix multiplication
+matrix_product <- (as.matrix(model_predictors) %*% lda.fit$scaling) %>%
+  data.frame()
+```
+
+> Next, install and access the plotly package. Create a 3D plot (cool!) of the columns of the matrix product using the code below. Adjust the code: add argument color as a argument in the plot_ly() function. Set the color to be the crime classes of the train set. Draw another 3D plot where the color is defined by the clusters of the k-means. How do the plots differ? Are there any similarities? (0-3 points to compensate any loss of points from the above exercises)
+
+Let's first do the interactive 3D plot as **crime quartile** as the response variable.
+
+```{r}
+# Crime quartile as the response variable
+plotly::plot_ly(
+  x = matrix_product$LD1,
+  y = matrix_product$LD2,
+  z = matrix_product$LD3,
+  type = 'scatter3d',
+  mode = 'markers',
+  color = train$crime_quant,
+  colors = c("orange", "orangered", "purple", "dodgerblue2")
+) %>%
+  plotly::layout(
+    font = list(color = 'white'),
+    title = 'Crime quartile as the response variable',
+    scene = list(
+      xaxis = list(title = 'LD1'),
+      yaxis = list(title = 'LD2'),
+      zaxis = list(title = 'LD3')
+    ),
+    paper_bgcolor = backg
+  )
 ```
 
 
-```{r}
-end.time <- Sys.time()
-elapsed.time <- round((end.time - start.time), 3)
-elapsed.time
+Then let's change the response variable to K-mean clusters obtained earlier in this assignment.
 
-# bench::system_time(rmarkdown::render("test.Rmd", quiet = TRUE))
+```{r}
+# Join
+km_data <- train %>%
+  rownames_to_column("id") %>%
+  left_join(
+    boston_z %>% rownames_to_column("id") %>% select(id, cluster),
+    by = "id"
+  ) %>% select(-id)
+  
+# K-mean cluster as the response variable
+plotly::plot_ly(
+  x = matrix_product$LD1,
+  y = matrix_product$LD2,
+  z = matrix_product$LD3,
+  type = 'scatter3d',
+  mode = 'markers',
+  color = km_data$cluster,
+  colors = c("orange", "orangered", "purple", "dodgerblue2")
+) %>%
+  plotly::layout(
+    font = list(color = 'white'),
+    title = 'K-mean cluster as the response variable',
+    scene = list(
+      xaxis = list(title = 'LD1'),
+      yaxis = list(title = 'LD2'),
+      zaxis = list(title = 'LD3')
+    ),
+    paper_bgcolor = backg
+  )
+```
+
+The 3D plots seem almost identical irrespective of the grouping (color) variable (Crime quartile or K-mean clusters). There are only minor differences, such as a couple of blue dots in the purple cluster when using K-mean clusters to define colors. Fascinating!! The only possible explanation for the strikingly similar color patterns is that the `crim` variable is an important linear separator for the clusters and/or is intercorrelated to various other variables in the dataset.
+
+
+```{r}
+# Run time
+end.time <- Sys.time()
+elapsed.time <- (end.time - start.time) %>% round()
+elapsed.time
 ```
 

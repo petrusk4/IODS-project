@@ -14,6 +14,9 @@ This part describes the statistical analysis of `learning2014` dataset.
 First let's load our packages and some custom functions.
 
 ```{r}
+# Run time
+start.time <- Sys.time()
+
 # Packages
 pacman::p_load(tidyverse, GGally, patchwork, ggfortify)
 
@@ -22,17 +25,6 @@ pacman::p_load(tidyverse, GGally, patchwork, ggfortify)
 colorpair <- c("orangered", "dodgerblue")
 color_gender <- \ () {scale_color_manual(values = colorpair)}
 fill_gender <- \ () {scale_fill_manual(values = colorpair)}
-
-# Dark mode theme
-theme_darkmode <- \ (backg = "#141415") {
-  ggdark::dark_theme_gray() %+replace% 
-    ggplot2::theme(
-      plot.background = element_rect(color = backg, fill = backg),
-      legend.box.background = element_rect(fill = backg, color = backg),
-      legend.background = element_rect(fill = backg, color = backg),
-      panel.grid = element_line(color = "gray20")
-    )
-}
 
 # Beautiful labels
 labs <- tribble(
@@ -415,3 +407,10 @@ m1_diag
 - The **Residuals vs Leverage** plot identifies two observations that have standardized residuals greater than absolute value 3, which are possible outliers.
 
 To conclude, the model assumptions hold up quite good.
+
+```{r}
+# .Rmd file run time
+end.time <- Sys.time()
+elapsed.time <- (end.time - start.time) %>% round()
+elapsed.time
+```
