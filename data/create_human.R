@@ -3,9 +3,8 @@
 # Author: Petrus Nuotio
 # Date: 28.11.2023
 
-# Joining data for the "analysis" section of 5. Dimension reduction techniques
-# Open data downloaded from:
-# https://archive.ics.uci.edu/dataset/320/student+performance
+# Preprocessing data for the "analysis" section
+# of 5. Dimension reduction techniques
 
 # ==============================================================================
 # Packages
