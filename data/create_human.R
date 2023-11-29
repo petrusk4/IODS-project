@@ -22,8 +22,7 @@ gii <- read_csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open
 
 # ==============================================================================
 # Explore, summaries
-finalfit::finalfit_glimpse(hd)
-finalfit::finalfit_glimpse(gii)
+list(hd, gii) %>% map(\ (x) finalfit::finalfit_glimpse(x))
 
 # ==============================================================================
 # New var names:
