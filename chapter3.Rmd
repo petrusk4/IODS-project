@@ -119,7 +119,7 @@ Data are ordinal but not interval, and also heavily skewed. Let's use Spearman c
 data[, c("alc_use", "high_use", vars_hypo$var)] %>%
   GGally::ggpairs(
     mapping = aes(color = romantic, fill = romantic), #, alpha = .3
-    upper = list(continuous = wrap("cor", method = "spearman")),
+    upper = list(continuous = wrap("cor", method = "spearman"))
   ) +
   harrypotter::scale_color_hp_d("LunaLovegood") +
   harrypotter::scale_fill_hp_d("LunaLovegood") + 
