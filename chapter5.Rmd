@@ -1,8 +1,6 @@
 # 5 Dimensionality reduction techniques
 ## Setup
 
-First let's load the needed packages and some custom functions.
-
 ```{r}
 # Packages
 pacman::p_load(tidyverse)
@@ -17,14 +15,23 @@ start.time <- Sys.time()
 
 ## 5.0 Get data
 
-Save the data to an object and check its structure
+Automatically choose the newest version of the wrangled `human` dataset.
 
 ```{r message=FALSE, warning=FALSE}
 # Read the most up-to-date data
 datasets <- list.files("data/human/ready", full.names = T)
 newest <- datasets %>% sub('.*_', '', .) %>% as.Date() %>% max()
 data <- datasets[grepl(newest, datasets)] %>%
-  readr::read_csv(show_col_types = F) %>%
+  readr::read_csv(show_col_types = F)
+```
+
+
+## 5.1 Inspect
+
+Numerical and graphical overview:
+
+```{r}
+data <- data %>%
   column_to_rownames("Country")
 
 # Glance at the data
@@ -37,8 +44,9 @@ GGally::ggpairs(data)
 ```
 
 
-## PCA
-### Using raw values
+## 5.2 PCA using raw values
+
+Let's deliberately make a principal component analysis with non-standardized variables.
 
 ```{r}
 # Principal component analysis
@@ -58,10 +66,10 @@ grid::grid.draw(grid::rectGrob(gp = grid::gpar(fill = backg)))
 print(p, newpage = FALSE)
 ```
 
-Because the variables have differing scales, now the GNI that is loaded in PC1 explains all the variability. This is not OK and we have to standardize the data asap. 
+**Problem:** Because the variables have differing scales, now variables with large absolute values dominate the GNI that is loaded in PC1 explains all the variability. This is not OK and we have to standardize the data asap. 
 
 
-### Using Standardized values
+## 5.3 PCA using standardized values
 
 ```{r}
 data_z <- scale(data) %>% data.frame()
@@ -77,6 +85,9 @@ p <- ggbiplot::ggbiplot(
   # groups = rownames(PCA), ellipse = TRUE, circle = TRUE
 ) + ggtitle("Variables are now balanced")
 
+factoextra::fviz_pca_ind(PCA, repel = TRUE) + theme_darkmode()
+
+
 # Print without white edges
 grid::grid.newpage()
 grid::grid.draw(grid::rectGrob(gp = grid::gpar(fill = backg)))
@@ -86,12 +97,16 @@ print(p, newpage = FALSE)
 As expected, results are much more balanced when variables are now measured at the same scale. Most influential variables include `Labo.FMm` `Mar.Mor` and `Ado.Birth`.
 
 
-### Personal interpretation
+## 5.4 Personal interpretation
 
 The 2nd PC shown above explains 16% of the variability in the data which is a good number. As always, most is explained by PC1 (54% here). Education and expected life span have negative loadings for the 1st PC. Maternal mortality and adolescent birth rate have positive loadings. These negatively and positively loaded variables have inverse correlation in the dataset, e.g., `Mat.Mor` and `Edu.Exp`: $r=0.7$.
 
 
-## MCA
+## 5.5 MCA
+
+Multiple Correspondence Analysis (MCA) is a generalization of principal component analysis when the variables of interest are categorical instead of quantitative.
+
+We are applying MCA to Let's see what kind of data we are dealing with:
 
 ```{r fig.width=10, fig.height=10}
 # Get data
@@ -108,31 +123,57 @@ tea %>%
   ggtitle('Visualization of the "tea" data set')
 ```
 
+It looks like `Age` variable is not truly categorical.
 
 ```{r}
-# Drop problematic variable
+# Drop problematic variable as it is not truly categorical
 names(tea)[19] # Age
 mca <- FactoMineR::MCA(tea[, -which(names(tea) == "age")], graph = FALSE)
 summary(mca)
 
 ```
 
-```{r}
-factoextra::fviz_screeplot(
-  mca, addlabels = TRUE, ylim = c(0, 20)
-) +
-  theme_darkmode()
+
+Plot MCA results:
+
+```{r fig.width = 10, fig.height=5}
+# "Boring" biplot
+# factoextra::fviz_mca_biplot(
+#   mca,
+# ) + theme_darkmode()
+
+
+# Contributions of variable levels to dimensions 1 and 2
+figg <- \ (x) {
+  theme_darkmode() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+}
+ggpubr::ggarrange(
+  factoextra::fviz_contrib(mca, choice = "var", axes = 1, top = 15) + figg(),
+  factoextra::fviz_contrib(mca, choice = "var", axes = 2, top = 15) + figg(),
+  factoextra::fviz_screeplot(mca, addlabels = TRUE, ylim = c(0, 20)) +
+    theme_darkmode(),
+  align = "hv",
+  ncol = 3
+)
+
+# Look at interesting variables
+factoextra::fviz_ellipses(
+  mca, c("tearoom", "age_Q"),
+  geom = "point"
+) + theme_darkmode()
 ```
 
+This MCA is trying to explain all the variables related to tea drinking in 300 participants. As there are a lot of variables, the proportion of variability that each dimension explains is relatively low. Distance between row points or column points in the MCA factor map tells about their similarity (or dissimilarity) -- similar column and row points are close to each other.
 
+The bar plot shows the contribution of variables to principal dimensions. Variable `tearoom` has the strongest correlation with dimension 1 and age_Q has the strongest correlation to dimension 2.
 
 ```{r}
-# Plot
-plot(mca, invisible = c("ind"), habillage = "quali", graph.type = "classic")
+# Run time
+end.time <- Sys.time()
+elapsed.time <- (end.time - start.time) %>% round()
+elapsed.time
 ```
-
-
-
 
 
 
