@@ -22,6 +22,7 @@ gii <- read_csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open
 
 # ==============================================================================
 # Explore, summaries
+# The 'human' dataset originates from the United Nations Development Programme
 list(hd, gii) %>% map(\ (x) finalfit::finalfit_glimpse(x))
 
 # ==============================================================================
@@ -66,15 +67,35 @@ data <- inner_join(
 # Glimpse at the new combined data
 glimpse(data)
 
-# Compare to premade data
-# data_premade <- read.table(
-#   "https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/alc.csv",
-#   sep = ",",
-#   header = TRUE
-# )
-# diffdf::diffdf(alc, data_premade)
-
 
 # Write to file
 write_csv(data, paste0("data/human/ready/human_", Sys.Date(), ".csv"))
 
+# ==============================================================================
+# Keep only needed variables
+data <- data %>% dplyr::select(
+  Country, Edu2.FM, Labo.FM, Edu.Exp, Life.Exp, GNI, Mat.Mor, Ado.Birth, Parli.F
+)
+
+# Remove all rows with missing values
+data <- data %>% drop_na()
+
+# Remove observations that relate to regions instead of countries
+data <- data %>% filter(
+  !Country %in% c(
+    "Arab States",
+    "East Asia and the Pacific",
+    "Europe and Central Asia",
+    "Latin America and the Caribbean",
+    "South Asia",
+    "Sub-Saharan Africa",
+    "World"
+  )
+)
+
+# Check end product
+glimpse(data)
+
+
+# Write to file
+write_csv(data, paste0("data/human/ready/human_", Sys.Date(), ".csv"))

@@ -1,0 +1,91 @@
+# 5 Dimensionality reduction techniques
+## Setup
+
+First let's load the needed packages and some custom functions.
+
+```{r}
+# Packages
+pacman::p_load(tidyverse)
+
+# Custom functions
+source("src/fig_setup.R")
+
+# Run time
+start.time <- Sys.time()
+```
+
+
+## 5.0 Get data
+
+Save the data to an object and check its structure
+
+```{r message=FALSE, warning=FALSE}
+# Read the most up-to-date data
+datasets <- list.files("data/human/ready", full.names = T)
+newest <- datasets %>% sub('.*_', '', .) %>% as.Date() %>% max()
+data <- datasets[grepl(newest, datasets)] %>%
+  readr::read_csv(show_col_types = F) %>%
+  column_to_rownames("Country")
+
+# Glance at the data
+finalfit::finalfit_glimpse(data)$Continuous %>%
+  select(-label) %>%
+  knitr::kable()
+
+# Visualize
+GGally::ggpairs(data)
+```
+
+
+## PCA
+### Using raw values
+
+```{r}
+# Principal component analysis
+PCA <- prcomp(data, center = F, scale. = F)
+PCA_s <- summary(PCA)
+importances <- scales::percent(PCA_s$importance[2, ], .01)
+
+# Plot
+p <- ggbiplot::ggbiplot(
+  PCA, #obs.scale = 0, var.scale = 0, 
+  # groups = rownames(PCA), ellipse = TRUE, circle = TRUE
+) + ggtitle("GNI in PC1 explains all variance")
+
+# Print without white edges
+grid::grid.newpage()
+grid::grid.draw(grid::rectGrob(gp = grid::gpar(fill = backg)))
+print(p, newpage = FALSE)
+```
+
+Because the variables have differing scales, now the GNI that is loaded in PC1 explains all the variability. This is not OK and we have to standardize the data asap. 
+
+
+### Using Standardized values
+
+```{r}
+data_z <- scale(data) %>% data.frame()
+
+# Principal component analysis
+PCA <- prcomp(data_z, center = F, scale. = F)
+PCA_s <- summary(PCA)
+importances <- scales::percent(PCA_s$importance[2, ], .01)
+
+# Plot
+p <- ggbiplot::ggbiplot(
+  PCA, #obs.scale = 0, var.scale = 0, 
+  # groups = rownames(PCA), ellipse = TRUE, circle = TRUE
+) + ggtitle("Variables are now balanced")
+
+# Print without white edges
+grid::grid.newpage()
+grid::grid.draw(grid::rectGrob(gp = grid::gpar(fill = backg)))
+print(p, newpage = FALSE)
+```
+
+
+
+
+
+
+
