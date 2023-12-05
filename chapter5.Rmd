@@ -83,6 +83,53 @@ grid::grid.draw(grid::rectGrob(gp = grid::gpar(fill = backg)))
 print(p, newpage = FALSE)
 ```
 
+As expected, results are much more balanced when variables are now measured at the same scale. Most influential variables include `Labo.FMm` `Mar.Mor` and `Ado.Birth`.
+
+
+### Personal interpretation
+
+The 2nd PC shown above explains 16% of the variability in the data which is a good number. As always, most is explained by PC1 (54% here). Education and expected life span have negative loadings for the 1st PC. Maternal mortality and adolescent birth rate have positive loadings. These negatively and positively loaded variables have inverse correlation in the dataset, e.g., `Mat.Mor` and `Edu.Exp`: $r=0.7$.
+
+
+## MCA
+
+```{r fig.width=10, fig.height=10}
+# Get data
+tea <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/tea.csv", stringsAsFactors = TRUE)
+glimpse(tea)#; View(tea) 
+
+# Visualize
+tea %>%
+  gather() %>%
+  ggplot(aes(value)) +
+  facet_wrap("key", scales = "free", ncol = 8) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  ggtitle('Visualization of the "tea" data set')
+```
+
+
+```{r}
+# Drop problematic variable
+names(tea)[19] # Age
+mca <- FactoMineR::MCA(tea[, -which(names(tea) == "age")], graph = FALSE)
+summary(mca)
+
+```
+
+```{r}
+factoextra::fviz_screeplot(
+  mca, addlabels = TRUE, ylim = c(0, 20)
+) +
+  theme_darkmode()
+```
+
+
+
+```{r}
+# Plot
+plot(mca, invisible = c("ind"), habillage = "quali", graph.type = "classic")
+```
 
 
 
