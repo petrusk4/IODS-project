@@ -1,0 +1,41 @@
+# 6 Analysis of longitudinal data
+## Setup
+
+```{r}
+# Packages
+pacman::p_load(tidyverse)
+
+# Custom functions
+source("src/fig_setup.R")
+
+# Run time
+start.time <- Sys.time()
+```
+
+
+## 6.0 Get data
+
+Automatically choose the newest version of the wrangled `human` dataset.
+
+```{r message=FALSE, warning=FALSE}
+# Read the most up-to-date data
+datasets <- list.files("data/human/ready", full.names = T)
+newest <- datasets %>% sub('.*_', '', .) %>% as.Date() %>% max()
+data <- datasets[grepl(newest, datasets)] %>%
+  readr::read_csv(show_col_types = F)
+```
+
+
+
+
+
+
+
+```{r}
+# Run time of this chapter code
+end.time <- Sys.time(); elapsed.time <- (end.time - start.time) %>% round()
+elapsed.time
+```
+
+
+
