@@ -51,19 +51,52 @@ RATS <- RATS %>% mutate(
 BPRSL <- BPRS %>% pivot_longer(
   cols = week0:week8,
   names_to = "week",
-  values_to = "value"
+  values_to = "bprs"
+) %>% mutate(
+  week = gsub("week", "", week) %>% as.numeric(),
 )
+
 RATSL <- RATS %>% pivot_longer(
   cols = WD1:WD64,
-  names_to = "Time",
-  values_to = "value"
+  names_to = "WD",
+  values_to = "Weight"
+) %>% mutate(
+  WD = gsub("WD", "", WD) %>% as.numeric()
 )
 
 # ==============================================================================
 # Glimpse at the long data
 finalfit::finalfit_glimpse(BPRSL)
-glimpse(RATSL)
+finalfit::finalfit_glimpse(RATSL)
 
+# ==============================================================================
+# Visualize
+# Loop instructions
+datasets <- tribble(
+  ~dataset, ~groupby, ~id, ~measurevar, ~timevar,
+  "BPRSL", "treatment", "subject", "bprs", "week",
+  "RATSL", "Group", "ID", "Weight", "WD"
+)
+
+# Loop
+plist <- lapply(1:nrow(datasets), \ (i) {
+  datasets$dataset[i] %>% get() %>%
+    ggplot(aes(
+      x = .data[[datasets$timevar[i]]],
+      y = .data[[datasets$measurevar[i]]],
+      color = .data[[datasets$groupby[i]]]
+    )) +
+    stat_summary(fun.data = mean_cl_normal, position = position_dodge(.5)) +
+    stat_summary(
+      aes(group = .data[[datasets$groupby[i]]]),
+      fun = mean, geom = "line", position = position_dodge(.5)
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+    ggtitle(datasets$dataset[i])
+})
+ggpubr::ggarrange(plotlist = plist)
+
+# ==============================================================================
 # Write to file
 BPRSL %>% write_csv(paste0("data/bprs_rats/ready/BPRS_long_", Sys.Date(), ".csv"))
 RATSL %>% write_csv(paste0("data/bprs_rats/ready/RATS_long_", Sys.Date(), ".csv"))
