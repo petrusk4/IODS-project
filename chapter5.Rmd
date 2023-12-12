@@ -30,7 +30,7 @@ data <- datasets[grepl(newest, datasets)] %>%
 
 Numerical and graphical overview:
 
-```{r}
+```{r message=FALSE}
 # Country to row names
 data <- data %>%
   column_to_rownames("Country")
@@ -43,7 +43,7 @@ finalfit::finalfit_glimpse(data)$Continuous %>%
 # Visualize
 GGally::ggpairs(
   data,
-  upper = list(continuous = wrap("cor", method = "spearman"))
+  upper = list(continuous = GGally::wrap("cor", method = "spearman"))
 )
 ```
 

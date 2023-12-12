@@ -99,6 +99,8 @@ There is considerable tracking: rats with higher baseline weight tend to have hi
 
 ### Tendencies
 
+Not-so-obvious patterns can be found by visualizing descriptive summaries of data.
+
 ```{r fig.width=10, fig.height=5}
 dodge <- position_dodge(.5)
 mypalette <- c("chartreuse", "purple1", "turquoise")
@@ -250,7 +252,7 @@ RATSL %>%
   rstatix::get_anova_table()
 ```
 
-When considering all rats, linear regression analysis shows that there is *no significant difference* in weight change between groups. However, when removing the major outlier (rat n:o 12), **both diets 2 ($p = 0.002$) and 3 ($p = 0.005$) differ from the control diet**. This result is further confirmed by repeated measures ANOVA, which shows significant group × time interaction (= effect of time depends on diet group). To conclude, baseline weights differ significantly between diets and so do weight changes during the intervention.
+*The following results demonstrate that careful preprosessing is a critical part of data analysis.* When considering all rats, linear regression analysis shows that there is *no significant difference* in weight change between groups. However, when removing the major outlier (rat n:o 12), **both diets 2 ($p = 0.002$) and 3 ($p = 0.005$) differ from the control diet**. This result is further confirmed by repeated measures ANOVA, which shows significant group × time interaction (= effect of time depends on diet group). To conclude, baseline weights differ significantly between diets and so do weight changes during the intervention.
 
 
 ## 6.2 BPRS
@@ -270,27 +272,55 @@ BPRSL %>%
   {table(.$treatment)}
 ```
 
+
+### Graphical displays
+
 First it will be helpful to plot all data and observe any obvious big patterns. 
 
-```{r fig.width=6, fig.height=3.5}
-bprs_pal <- \ (x) {scale_color_manual(values = c("turquoise2", "orange"))}
-# Plot individual rat data
-BPRSL %>%
+```{r fig.width=9, fig.height=3.5}
+# Pick nice colors
+bprs_col <- \ (x) {scale_color_manual(values = c("turquoise2", "orange"))}
+bprs_fil <- \ (x) {scale_fill_manual(values = c("turquoise2", "orange"))}
+
+# Plot individual human data
+p1 <- BPRSL %>%
   ggplot(aes(x = week, y = bprs, group = subject, color = treatment)) +
   geom_line(alpha = .3, linewidth = .2) +
   stat_summary(fun = "mean", geom = "line", aes(group = treatment)) +
   theme(legend.position = "none") +
   facet_grid(. ~ treatment) +
-   labs(title = "BPRS scores") + xlab("Time, weeks") + bprs_pal()
+  labs(title = "BPRS scores across time", subtitle = "by treatment group") +
+  xlab("Time, weeks") +
+  bprs_col() + bprs_fil()
+
+# Summarise a bit
+p2 <- BPRSL %>%
+  ggplot(aes(
+    x = week, y = bprs,
+    group = subject, color = treatment, fill = treatment
+  )) +
+  stat_summary(fun = mean, geom = "line", aes(group = treatment)) +
+  stat_summary(
+    fun.data = mean_cl_normal,
+    geom = "ribbon", aes(group = treatment), color = NA, alpha = .2
+  ) +
+  labs(title = "Considerable overlap", subtitle = "in 95% CIs of group means") +
+  xlab("Time, weeks") +
+  bprs_col() + bprs_fil()
+
+# Combine plots
+patchwork::wrap_plots(p1, p2) + patchwork::plot_layout(widths = c(2, 1))
 ```
 
-Clearly there is a lot of variation between and within subjects. Both treatments show decreasing mean `bprs` score across time. Whether these trends are statistically significant or even differ between treatments is yet unknown. These questions are best answered using *linear mixed models*. 
+Clearly there is a lot of variation between and within subjects. Both treatments show decreasing mean `bprs` score across time. Whether these trends are statistically significant or *even differ between treatments* is yet unknown. However I suspect that both treatments lower `bprs` score equally well. These questions are best answered using *linear mixed models*. 
 
 
 ### Linear mixed models
 
+First model will have **random intercept** for each `subject`. 
+
 ```{r}
-# Fit 1st model
+# Fit random intercept model
 refmod <- lmerTest::lmer(
   bprs ~ week + treatment + (1 | subject),
   REML = FALSE,
@@ -299,38 +329,120 @@ refmod <- lmerTest::lmer(
 anova(refmod)#; summary(refmod)
 ```
 
-
+Next, **random slopes** will also be fitted in addition to random intercepts. This may enable better fit for the model.
 
 ```{r}
-refmod2 <- lmer(
+# Fit random slope & intercept model
+refmod2 <- lmerTest::lmer(
   bprs ~ week + treatment + (week | subject),
   data = BPRSL, REML = FALSE
 )
-summary(refmod2)
+anova(refmod2)#; summary(refmod2)
+
+# Compare the models
+anova(refmod, refmod2)
 ```
 
+Indeed it seems like random slopes improved the model chi-squared statistics and log-likelihood test based on our `Pr(>Chisq)` < 0.05. 
 
+Will interaction term between `week` and `treatment` further improve the model? This is worth trying especially as *group × time interaction is probably the main question of the whole study design*.
 
+```{r}
+# Fit random slope & intercept model with interaction
+refmod3 <- lmerTest::lmer(
+  bprs ~ week * treatment + (week | subject),
+  data = BPRSL, REML = FALSE
+)
+anova(refmod3)#; summary(refmod2)
 
+# Compare the models
+anova(refmod2, refmod3)
+```
 
+Including the interaction no longer (clearly) improved our model. However, **this may still be the best / a right way to look at the data**, based on the study design and research question: *will the change in bprs score depend on treatment?* To note, the interaction is just barely shy of significance ($p = 0.075$)!
 
+Finally I want to test a model with interaction term and random intercept only, as it appears to be the most common practice in my field (dietary intervention studies).
 
+```{r}
+# Fit random intercept model with interaction
+refmod4 <- lmerTest::lmer(
+  bprs ~ week * treatment + (1 | subject),
+  data = BPRSL, REML = FALSE
+)
+anova(refmod4)#; summary(refmod2)
 
+# Compare the models
+anova(refmod3, refmod4)
+```
 
+Now our model got actually worse, and model 3 with the interaction term and random slope & intercept remains superior. The between-treatment difference in `bprs` change (`week:treatment` interaction term) still doesn't reach significance, although it is pretty close!
 
+We can compare the original values to fitted ones.
 
+```{r fig.width=12, fig.height=5}
+Fitted <- fitted(refmod3)
+BPRSL <- BPRSL %>% mutate(fitted = Fitted)
 
+# Plot individual human data
+p1 <- BPRSL %>%
+  pivot_longer(
+    cols = c(bprs, fitted),
+    names_to = "type",
+    values_to = "bprs"
+  ) %>%
+  mutate(type = recode_factor(type, "bprs" = "Observed", "fitted" = "Fitted")) %>%
+  ggplot(aes(x = week, y = bprs, group = subject, color = treatment)) +
+  geom_line(alpha = .5, linewidth = .2) +
+  stat_summary(fun = mean, geom = "line", aes(group = treatment)) +
+  stat_summary(
+    fun.data = mean_cl_normal,
+    geom = "errorbar", aes(group = treatment),
+    width = .2
+  ) +
+  theme(legend.position = "none") +
+  facet_grid(treatment ~ type) +
+   labs(title = "Observed and fitted BPRS scores") + xlab("Time, weeks") + bprs_col()
 
+# Head-to-head comparison
+p2 <- BPRSL %>%
+  pivot_longer(
+    cols = c(bprs, fitted),
+    names_to = "type",
+    values_to = "bprs"
+  ) %>%
+  mutate(type = recode_factor(type, "bprs" = "Observed", "fitted" = "Fitted")) %>%
+  ggplot(aes(x = week, y = bprs, group = subject, color = treatment)) +
+  stat_summary(
+    fun = mean,
+    geom = "line",
+    aes(group = treatment),
+    position = dodge
+  ) +
+  stat_summary(
+    fun = mean, geom = "point", aes(group = treatment), position = dodge
+  ) +
+  stat_summary(
+    fun.data = mean_cl_normal, alpha = .3,
+    geom = "linerange", aes(group = treatment), position = dodge
+  ) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  ) +
+  facet_grid(. ~ type) +
+   labs(title = "More explicit comparison between treatments") + xlab("Time, weeks") + bprs_col()
 
+patchwork::wrap_plots(p1, p2) + patchwork::plot_layout(widths = c(1, 1))
+```
 
-
-
+The fitted values of this model (3) seem to describe the original data quite good. The model allows for both intercept and slope randomness so that an optimally "personalized" (albeit linear) change is modeled for each participant. In the final 2 weeks the benefits seem to plateau, which is not captured by **linear** mixed models. Although this study did not demonstrate clear (significant) difference between treatments ($p = 0.075$), treatment 1 might hold promise to be slightly superior.
 
 ```{r}
 # Run time of this chapter code
 end.time <- Sys.time(); elapsed.time <- (end.time - start.time) %>% round()
 elapsed.time
 ```
+
 
 
 

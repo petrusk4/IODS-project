@@ -50,4 +50,5 @@ source("src/fig_setup.R")
 ```{r child = "chapter6.Rmd"}
 ```
 
-<!-- *(More chapters to be added as we proceed with the course!)* -->
+
+Thanks for the great course!
