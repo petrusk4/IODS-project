@@ -8,22 +8,317 @@ pacman::p_load(tidyverse)
 # Custom functions
 source("src/fig_setup.R")
 
-# Run time
+# Code run time
 start.time <- Sys.time()
 ```
 
 
 ## 6.0 Get data
 
-Automatically choose the newest version of the wrangled `human` dataset.
+Automatically choose the newest version of each dataset.
 
 ```{r message=FALSE, warning=FALSE}
 # Read the most up-to-date data
-datasets <- list.files("data/human/ready", full.names = T)
+datasets <- list.files("data/bprs_rats/ready", full.names = T)
 newest <- datasets %>% sub('.*_', '', .) %>% as.Date() %>% max()
-data <- datasets[grepl(newest, datasets)] %>%
-  readr::read_csv(show_col_types = F)
+data <- datasets[grepl(newest, datasets) & grepl("long", datasets)] %>%
+  map(. %>% readr::read_csv(show_col_types = F))
+
+BPRSL <- data[[1]] %>% mutate(
+  subject = factor(subject),
+  treatment = recode_factor(treatment, `1` = "Treatment 1", `2` = "Treatment 2")
+)
+RATSL <- data[[2]] %>% mutate(
+  ID = factor(ID),
+  Group = recode_factor(Group, `1` = "Diet 1", `2` = "Diet 2", `3` = "Diet 3")
+)
+
+# Uncomment to get metadata
+# ?nlme::BodyWeight
 ```
+
+**We have two datasets.**
+
+- `RATSL` describes three groups of rats that were put on different diets. Each animal’s body weight was recorded repeatedly over a 9-week period. The important question is whether the growth profiles of the three groups differ or not.
+
+- `BPRSL` is from a parallel-arm human RCT in which 40 male subjects were randomized to one of two interventions. Participants were rated on the brief psychiatric rating scale (BPRS) at baseline and then at weekly intervals for 8 weeks. `bprs` assesses the level of 18 symptom constructs such as *hostility*, *suspiciousness*, *hallucinations* and *grandiosity*; each of these is rated from one (not present) to seven (extremely severe). The scale is used for patients that may have schizophrenia.
+
+
+## 6.1 RATS
+
+Briefly checking the data structure.
+
+```{r}
+str(RATSL)
+```
+
+There are 16 rats divided to 3 diet groups. Group 1 is control group which probably gets typical chow diet. The composition of diets 2 and 3 remain a mystery to us...
+
+```{r}
+# N of rats assigned to different diets
+RATSL %>%
+  filter(WD == 1) %>%
+  {table(.$Group)}
+```
+
+
+### Graphical displays of data
+
+```{r fig.width=6, fig.height=3.5}
+# Plot individual rat data
+RATSL %>%
+  ggplot(aes(x = WD, y = Weight, color = ID)) +
+  geom_line() +
+  theme(legend.position = "none") +
+  facet_grid(. ~ Group) +
+  scale_y_continuous( # Ounces for US folks :D
+    "Weight, g",
+    sec.axis = sec_axis(~ . / 28.35, breaks = seq(0, 100, 2), name = "Weight, oz.")
+  ) + labs(title = "Rats' growth by diet", subtitle = "Hand and Crowder (1996)") + xlab("Time, days")
+```
+
+The **control rats** (`Diet 1`) seem to have low weight to begin with and not much growth. **Diet 2** appears to have higher baseline weight, more growth and **a clear outlier (rat n:o 12)**, which is much heavier than any other rat. Rats on **Diet 3** may have even higher baseline weight, but the growth seems similar to rats on Diet 2.
+
+
+### Tracking
+
+Lets standardize the Weight variable by group:
+
+```{r fig.width=6, fig.height=3.5}
+RATSL %>%
+  group_by(Group) %>% mutate(Weight_std = scale(Weight)[, 1]) %>% ungroup() %>%
+  ggplot(aes(x = WD, y = Weight_std, color = ID)) +
+  geom_hline(yintercept = 0) +
+  geom_line() +
+  theme(legend.position = "none") +
+  facet_grid(. ~ Group) +
+  ggtitle("Tracking is clearly present in the RATS data") + xlab("Time, days") + ylab("Standardized weight, SD")
+```
+
+There is considerable tracking: rats with higher baseline weight tend to have higher weight throughout the study.
+
+### Tendencies
+
+```{r fig.width=10, fig.height=5}
+dodge <- position_dodge(.5)
+mypalette <- c("chartreuse", "purple1", "turquoise")
+
+# Mean (95% confidence intervals)
+p <- RATSL %>%
+  filter(WD != 44) %>%
+  ggplot(aes(x = WD / 7, y = Weight, color = Group))
+p <- p + geom_point(
+  shape = 21, size = 1, alpha = .8,
+  position = position_jitterdodge(jitter.width = .3, dodge.width = .5)
+)
+p <- p + stat_summary(fun = mean, geom = "line", position = dodge)
+p <- p + stat_summary(
+  fun.data = mean_cl_normal, geom = "errorbar", position = dodge, width = .3
+)
+p <- p + theme(
+  panel.grid.major.x = element_blank(),
+  panel.grid.minor.x = element_blank()
+)
+p <- p + scale_color_manual(values = mypalette)
+p <- p + scale_x_continuous(name = "Time, weeks", breaks = seq(0, 10, by = 1))
+p <- p + scale_y_continuous(name = "Weight, g")
+p <- p + ggtitle("Mean (95% CI)")
+p1 <- p
+
+# Boxplot visualization
+p <- RATSL %>%
+  filter(WD != 44) %>%
+  ggplot(aes(x = (WD / 7) %>% round() %>% factor, y = Weight, color = Group))
+p <- p + geom_line(
+  aes(group = ID), linewidth = .2, alpha = .5
+)
+p <- p + geom_boxplot(fill = NA)
+p <- p + theme(
+  panel.grid.major.x = element_blank(),
+  panel.grid.minor.x = element_blank(),
+  legend.position = "none"
+)
+p <- p + scale_color_manual(values = mypalette)
+p <- p + xlab("Time, weeks") + ylab("Weight, g")
+p <- p + ggtitle("Boxplot")
+p2 <- p
+
+patchwork::wrap_plots(p1, p2) +
+  patchwork::plot_layout(guides = "collect") +
+  patchwork::plot_annotation(tag_levels = 'A')
+
+```
+
+**Plot A** shows that confidence intervals are wide in diet 2 due to large inter-rat variation. This might be because of an outlier identified in **plot B** (rat n:o 12). Other diets also have outliers (lighter rats) but these are not so extreme that they would considerably widen the CI's. Group sizes are very small and it may affect the results if we further remove outliers.
+
+
+### Compare means
+
+Now let's remove the outlier from group 2 and make data frame that we can use to compare the changes between groups.
+
+```{r message=FALSE}
+# Calculate average weights on the intervention
+RATSLint <- RATSL %>%
+  filter(WD > 1) %>%
+  group_by(Group, ID) %>%
+  reframe(mean_int = mean(Weight)) %>% 
+  mutate( # Add baseline weight
+    baseline = RATSL %>% filter(WD == 1) %>% pull(Weight),
+    delta = mean_int - baseline
+  )
+```
+
+
+Plot the data:
+
+```{r fig.height=4, fig.width=8}
+# Plot baseline and intervention means
+p1 <- RATSLint %>%
+  filter(ID != 12) %>%
+  pivot_longer(
+  cols = c(baseline, mean_int),
+  names_to = "Timepoint",
+  values_to = "Weight"
+  ) %>%
+  mutate(Timepoint = recode(
+    Timepoint,
+    "baseline" = "At baseline",
+    "mean_int" = "During intervention"
+  )) %>%
+  ggplot(aes(x = Timepoint, y = Weight, color = Group)) +
+  geom_point(
+    shape = 21,
+    position = position_jitterdodge(jitter.width = .2, dodge.width = .5)
+  ) +
+  stat_summary(fun = mean, geom = "line", position = dodge, aes(group = Group)) +
+  stat_summary(
+  fun.data = mean_cl_normal, geom = "errorbar", position = dodge, width = .3
+) +
+  scale_color_manual(values = mypalette) +
+  ggtitle("Actual values by timepoint")
+
+# Delta variables
+p2 <- RATSLint %>%
+  filter(ID != 12) %>%
+  ggplot(aes(x = Group, y = delta, color = Group, fill = Group)) +
+  stat_summary(
+    fun = mean, geom = "col", aes(group = Group), alpha = .5, width = .3
+  ) +
+  geom_hline(yintercept = 0) +
+  stat_summary(
+    fun.data = mean_cl_normal, geom = "errorbar", width = .2, color = "white"
+  ) +
+  geom_point(
+    position = position_jitterdodge(jitter.width = .2, dodge.width = .5)
+  ) +
+  theme(legend.position = "none") +
+  scale_color_manual(values = mypalette) +
+  scale_fill_manual(values = mypalette) +
+  ylab("Change in weight") + ggtitle("Weight change")
+
+# Combine plots
+patchwork::wrap_plots(p1, p2) +
+  patchwork::plot_layout(widths = c(1, .8), guides = "collect") +
+  patchwork::plot_annotation(tag_levels = 'A')
+```
+
+**Panel A** shows that all diet groups exhibit some kind of weight increase from baseline. This increase appears to be the strongest on `Diet 2`. However, from **panel B** we see that there may be too few rats on `Diet 2` to draw strong conclusions about their weight change, as the CI is very wide and includes 0. We also cannot just look at delta variables because there is massive differences in baseline weight between rat groups.
+
+
+### Significance
+
+Let's test the significance of these changes with linear regression analysis (we'll do *mixed models* with `BPRS` data).
+
+```{r}
+# Fit the model
+# fit_full <- lm(mean_int ~ baseline + Group, data = RATSLint)
+fit_excl <- lm(mean_int ~ baseline + Group, data = RATSLint %>% filter(ID != 12))
+
+# fit_full %>% gtsummary::tbl_regression()
+fit_excl %>% gtsummary::tbl_regression()
+
+# See anova tables
+# anova(fit_full)
+anova(fit_excl)
+
+# Confirm using repeated measures ANOVA
+RATSL %>%
+  filter(ID != 12) %>%
+  rstatix::anova_test(
+    dv = Weight, wid = ID, within = WD, between = Group
+  ) %>%
+  rstatix::get_anova_table()
+```
+
+When considering all rats, linear regression analysis shows that there is *no significant difference* in weight change between groups. However, when removing the major outlier (rat n:o 12), **both diets 2 ($p = 0.002$) and 3 ($p = 0.005$) differ from the control diet**. This result is further confirmed by repeated measures ANOVA, which shows significant group × time interaction (= effect of time depends on diet group). To conclude, baseline weights differ significantly between diets and so do weight changes during the intervention.
+
+
+## 6.2 BPRS
+
+Briefly checking the data structure.
+
+```{r}
+str(BPRSL)
+```
+
+There are 40 male participants randomized equally to 2 interventions ($n = 20$ each). 
+
+```{r}
+# N's
+BPRSL %>%
+  filter(week == 0) %>%
+  {table(.$treatment)}
+```
+
+First it will be helpful to plot all data and observe any obvious big patterns. 
+
+```{r fig.width=6, fig.height=3.5}
+bprs_pal <- \ (x) {scale_color_manual(values = c("turquoise2", "orange"))}
+# Plot individual rat data
+BPRSL %>%
+  ggplot(aes(x = week, y = bprs, group = subject, color = treatment)) +
+  geom_line(alpha = .3, linewidth = .2) +
+  stat_summary(fun = "mean", geom = "line", aes(group = treatment)) +
+  theme(legend.position = "none") +
+  facet_grid(. ~ treatment) +
+   labs(title = "BPRS scores") + xlab("Time, weeks") + bprs_pal()
+```
+
+Clearly there is a lot of variation between and within subjects. Both treatments show decreasing mean `bprs` score across time. Whether these trends are statistically significant or even differ between treatments is yet unknown. These questions are best answered using *linear mixed models*. 
+
+
+### Linear mixed models
+
+```{r}
+# Fit 1st model
+refmod <- lmerTest::lmer(
+  bprs ~ week + treatment + (1 | subject),
+  REML = FALSE,
+  data = BPRSL
+)
+anova(refmod)#; summary(refmod)
+```
+
+
+
+```{r}
+refmod2 <- lmer(
+  bprs ~ week + treatment + (week | subject),
+  data = BPRSL, REML = FALSE
+)
+summary(refmod2)
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
